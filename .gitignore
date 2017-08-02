@@ -33,3 +33,4 @@ data/*.RData
 *.prj
 *.dbf
 *.lock
+*.xls*
