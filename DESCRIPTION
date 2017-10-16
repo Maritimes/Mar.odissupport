@@ -1,4 +1,4 @@
-Package: bio.odissupport
+Package: odissupport
 Type: Package
 Title: A Package Facilitating the Transfer of Data from PED to ODIS
 Version: 2017.08.02
