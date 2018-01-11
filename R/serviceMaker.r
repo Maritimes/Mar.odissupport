@@ -7,6 +7,7 @@
 #' @family data
 #' @importFrom arcgisbinding arc.write
 #' @importFrom RODBC sqlQuery
+#' @importFrom Mar.utils df_to_sp
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 #' @export
 serviceMaker <- function(channel, write.path){
@@ -46,7 +47,7 @@ serviceMaker <- function(channel, write.path){
       #write out a csv
       this_survey_season = this_survey$SEASON[1]
 
-      this_survey_sp=df_to_sp(this_survey, "LATITUDE_DD",  "LONGITUDE_DD" )
+      this_survey_sp=Mar.utils::df_to_sp(this_survey, "LATITUDE_DD",  "LONGITUDE_DD" )
 
       mmm_shapeinfo = list("type"="Point",
                            "hasZ"=FALSE,

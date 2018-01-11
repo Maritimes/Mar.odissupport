@@ -15,10 +15,6 @@ serviceMaker(channel, write.path)
 This function populates a geodatabase with features extracted from the groundfish database.  For every combination of
 SEASON/YEAR/SPECIES, a layer is created with all of the null sets
 }
-\seealso{
-Other data: \code{\link{df_to_sp}},
-  \code{\link{make_oracle_cxn}}
-}
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}
 }
