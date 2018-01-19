@@ -1,0 +1,7 @@
+Mar.odissupport 2018.01.19 
+==============
+
+Changes:
+
+* Moved getTaxaIDs here from as ITIS is typically of concern to ODIS
+* Removed dependencies on taxizesoap, since it depends on SSOAP, which is no longer available
