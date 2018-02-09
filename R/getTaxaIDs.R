@@ -36,10 +36,6 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
 
   df_res<-spec_list
 
-  # hasTS=FALSE
-  # if (requireNamespace("taxizesoap", quietly = T)==TRUE){
-  #   hasTS = TRUE
-  # }
 # Functions ---------------------------------------------------------------
   sapply_pb <- function(X, FUN, ...)
   {
@@ -59,22 +55,16 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
     res
   }
 
-    proper=function(s) sub("(.)", ("\\U\\1"), tolower(s), perl = TRUE)
-    # if (hasTS){
-    #   WoRMS2ITIS <- function(searchterm = NULL){
-    #     this = taxizesoap::worms_extid(searchterm, type="tsn")
-    #     return(this)
-    #   }
-    # }
+  proper=function(s) sub("(.)", ("\\U\\1"), tolower(s), perl = TRUE)
+
   chk_WoRMS <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
     this = taxize::get_wormsid(query=searchterm, searchtype=searchtype, ask=ask, verbose=verbose)
     this = as.data.frame(cbind(SEARCHTERM = searchterm, APHIAID=as.vector(this),MATCH_WORMS=attr(this,"match"), METHOD_WORMS = searchtype))
-    if (NROW(this[this$MATCH_WORMS=="not found",])>0) this[this$MATCH_WORMS=="not found",]$METHOD_WORMS<-NA
-    if (NROW(this[this$MATCH_WORMS=="NA due to ask=FALSE",])>0) this[this$MATCH_WORMS=="NA due to ask=FALSE",]$MATCH_WORMS<-"multi match"
+    if (NROW(this[grep("NA due to ask=FALSE", this$MATCH_WORMS),])>0)  this[grep("NA due to ask=FALSE", this$MATCH_WORMS),]$MATCH_WORMS<-"multi match"
     return(this)
   }
 
-    chk_ITIS <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+  chk_ITIS <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
     this = data.frame(SEARCHTERM = NA, TSN = NA, MATCH_ITIS = NA, METHOD_ITIS = NA)
     for (i in 1:NROW(searchterm)){
       if (searchtype == 'scientific'){
@@ -104,7 +94,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
   # check for matches based on sci name, then common name (if provided)
   cat("Checking WoRMS for Scientific names\n")
   chk_WoRMSspec_list_sci = as.data.frame(t(sapply_pb(df_imp[,sci_col],chk_WoRMS)))
-  chk_WoRMSspec_list_sci_miss = chk_WoRMSspec_list_sci[!chk_WoRMSspec_list_sci$MATCH=="not found",]
+  chk_WoRMSspec_list_sci_miss = chk_WoRMSspec_list_sci[is.na(chk_WoRMSspec_list_sci$APHIAID),]
 
   if (NROW(chk_WoRMSspec_list_sci_miss)>0){
     if (!is.null(comm_col)) {
@@ -135,10 +125,20 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
   # ITIS
   # check for matches based on sci name, then common name (if provided)
   cat("Checking ITIS for Scientific names\n")
-  chk_ITISspec_list_sci = as.data.frame(t(sapply_pb(df_imp[,sci_col],chk_ITIS)))
-  chk_ITISspec_list_sci_miss = chk_ITISspec_list_sci[!chk_ITISspec_list_sci$MATCH=="not found",]
+  chk_ITISspec_list_sci =  data.frame(SEARCHTERM=character(),
+                          TSN=integer(), 
+                          MATCH_ITIS=character(), 
+                          METHOD_ITIS=character(), 
+                         stringsAsFactors=FALSE)
+  for (j in 1:length(df_imp[,sci_col])){
+    chk_ITISspec_list_sci = rbind(chk_ITISspec_list_sci, chk_ITIS(df_imp[,sci_col][j]))
+  }
+  
+  # chk_ITISspec_list_sci = as.data.frame(t(sapply_pb(df_imp[,sci_col],chk_ITIS)))
+  chk_ITISspec_list_sci_miss = chk_ITISspec_list_sci[is.na(chk_ITISspec_list_sci$TSN),]
 
   if (NROW(chk_ITISspec_list_sci_miss)>0){
+
     if (!is.null(comm_col)) {
       cat("Checking ITIS for common names\n")
       chk_ITISspec_list_comm = as.data.frame(t(sapply_pb(chk_ITISspec_list_sci_miss$SEARCHTERM, chk_ITIS, searchtype="common")))
@@ -163,37 +163,25 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
   }else{
     spec_list_ITIS = merge(df_imp, chk_ITISspec_list_sci, by.x = sci_col, by.y = "SEARCHTERM", all.x=TRUE)
   }
-   spec_list_ID <- merge(spec_list_WoRMS, spec_list_ITIS, by=c(sci_col, comm_col))
+  spec_list_ID <- merge(spec_list_WoRMS, spec_list_ITIS, by=c(sci_col, comm_col))
 
-#    if (hasTS){
-#       cat("Trying to find missing ITIS IDs using found WoRMS IDs...\n")
-#       potential_ITIS = spec_list_ID[!is.na(spec_list_ID$APHIAID) & is.na(spec_list_ID$TSN),]
-#       if (NROW(potential_ITIS)>0){
-#         spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID,]$TSN<-sapply_pb(potential_ITIS$APHIAID, WoRMS2ITIS)
-#         if (NROW(spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & spec_list_ID$TSN =="",])>0)
-#           spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & spec_list_ID$TSN =="",]$TSN <- NA
-#         if (NROW(spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & !is.na(spec_list_ID$TSN),])>0)
-#           spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & !is.na(spec_list_ID$TSN),]$METHOD_ITIS <- "from aphiaid"
-#         if (NROW(spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & !is.na(spec_list_ID$TSN) & spec_list_ID$MATCH_ITIS == "not found",])>0)
-#           spec_list_ID[spec_list_ID$APHIAID %in% potential_ITIS$APHIAID & !is.na(spec_list_ID$TSN) & spec_list_ID$MATCH_ITIS == "not found",]$MATCH_ITIS <-"found"
-#       }
-#    }else{
-#      cat("\nIf you had the taxizesoap package installed, the script would try to find ITIS tsns from the WoRMS aphiaIDs it found at this point.
-# To install install taxizesoap from github, do the following:\n
-#    require(devtools)
-#    install_github('ropensci\\taxizesoap')\n\n")
-#    }
   cat("Check that we're using 'accepted' versions of the ITIS IDs...\n")
   if (NROW(spec_list_ID[!is.na(spec_list_ID$TSN),])>0){
-    TSNCheck = data.frame(t(sapply_pb(spec_list_ID[!is.na(spec_list_ID$TSN),]$TSN, taxize::itis_acceptname)))
-    spec_list_ID = merge(spec_list_ID, TSNCheck[,c("submittedtsn","acceptedtsn","acceptedname")], by.x = "TSN", by.y = "submittedtsn", all.x=TRUE)
+    TSNCheck =  data.frame(submittedtsn=character(),
+                       acceptedname=character(), 
+                       acceptedtsn=character(), 
+                       author=character(), 
+                     stringsAsFactors=FALSE)
+   for (i in 1:length(spec_list_ID[!is.na(spec_list_ID$TSN),"TSN"])){
+     TSNCheck = rbind(TSNCheck,taxize::itis_acceptname(searchtsn = spec_list_ID[!is.na(spec_list_ID$TSN),"TSN"][i]))
+   } 
+   spec_list_ID = merge(spec_list_ID, TSNCheck[,c("submittedtsn","acceptedtsn","acceptedname")], by.x = "TSN", by.y = "submittedtsn", all.x=TRUE)
   }else{
     spec_list_ID$acceptedtsn = NA
     spec_list_ID$acceptedname = NA
   }
   spec_list_ID$TSNFinal = NA
   spec_list_ID[!is.na(spec_list_ID$acceptedtsn),]$TSNFinal <- spec_list_ID[!is.na(spec_list_ID$acceptedtsn),]$acceptedtsn
-  spec_list_ID[is.na(spec_list_ID$acceptedtsn),]$TSNFinal <- spec_list_ID[is.na(spec_list_ID$acceptedtsn),]$TSN
   spec_list_ID$TSN <- unlist(spec_list_ID$TSNFinal)
   spec_list_ID$TSNFinal <- NULL
   spec_list_ID$acceptedtsn <- NULL
@@ -217,7 +205,22 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL){
     }
   }
 
+  cat("Trying to find missing TSN using found AphiaID...\n")
+  for (k in 1:length(spec_list_ID[!is.na(spec_list_ID$APHIAID) & is.na(spec_list_ID$TSN),"APHIAID"])){
+    this1 <- tryCatch(
+      {
+        wm_external(as.integer(spec_list_ID[!is.na(spec_list_ID$APHIAID) & is.na(spec_list_ID$TSN),"APHIAID"][k]),type = "tsn")
+        },
+      error=function(cond){
+      }
+    )
+    if (!is.null(this1)) {
+      spec_list_ID[!is.na(spec_list_ID$APHIAID) & is.na(spec_list_ID$TSN),"MATCH_ITIS"][k] <- "from aphiaID"
+      spec_list_ID[!is.na(spec_list_ID$APHIAID) & is.na(spec_list_ID$TSN),"TSN"]<-this1
+    }
+  }
+
   spec_list_ID[,sci_col]<-toupper(spec_list_ID[,sci_col])
-  spec_list_ID <- merge(df_res, spec_list_ID)
+  spec_list_ID <- merge(df_res, spec_list_ID, by.x = c(sci_col,comm_col), by.y=c(sci_col,comm_col))
   return(spec_list_ID)
 }
