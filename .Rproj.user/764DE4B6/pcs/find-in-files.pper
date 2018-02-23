@@ -1,0 +1,10 @@
+{
+    "dialog-state" : {
+        "caseSensitive" : false,
+        "filePatterns" : [
+        ],
+        "path" : "/media/sf_git/Maritimes/Mar.odissupport",
+        "query" : "make_oracle",
+        "regex" : false
+    }
+}

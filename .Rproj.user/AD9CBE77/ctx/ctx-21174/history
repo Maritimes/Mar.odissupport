@@ -1,0 +1,7 @@
+devtools::use_package('Mar.utils')
+document()
+devtools::use_package('Mar.utils')
+install_github('Maritimes/Mar.utils')
+devtools::use_package('Mar.utils')
+document()
+document()
