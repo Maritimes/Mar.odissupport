@@ -161,7 +161,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     }
     this <- tryCatch(
       {
-        taxize::get_wormsid(query=tmpTerm, searchtype=searchtype, ask=ask, verbose=verbose, accepted = TRUE,rows = 1)
+        taxize::get_wormsid(query=tmpTerm, searchtype=searchtype, ask=ask, verbose=verbose, accepted = TRUE,rows = 1, messages = F)
       },
       error=function(cond){
       }
