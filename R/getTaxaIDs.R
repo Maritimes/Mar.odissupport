@@ -75,6 +75,7 @@
 #' @family qc
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 #' @export
+#' @note
 getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterStrings=NULL){
   filterStrings <- c(filterStrings, "\\(NS\\)", " SP\\.", "S\\.O\\.", "F\\.","UNIDENTIFIED", "EGGS","UNID\\.","\\(ORDER\\)","\\(SUBORDER\\)")
   
@@ -436,8 +437,6 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     if (nrow(no_TSN)>0) {
       #print(colnames(no_TSN))
       no_TSN = as.data.frame(t(sapply_pb(no_TSN[,colname],chk_ritis, filterStrings = filterStrings, searchtype=searchtype)))
-      no_TSNKeep<<-no_TSN
-      definitiveKeep<<-definitive
       names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis")
       definitive = assignDefinitive(definitive,no_TSN, searchtype)
     }

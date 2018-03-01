@@ -78,6 +78,14 @@ considered less definitive, and can be recognized by their <>_src fields
 indication multiple sources - e.g. "Both worrms & ritis")
 }
 }
+\note{
+remove potential confusion from CASE sensitivity
+_src is where we got the ID (e.g. worrms)
+_data is what we used to get the id (e.g. scientific/common name, or another ID)
+this is a progress bar function I can wrap around stuff
+think I stole it from https://ryouready.wordpress.com/2010/01/11/
+progress-bars-in-r-part-ii-a-wrapper-for-apply-functions/
+}
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}
 }
