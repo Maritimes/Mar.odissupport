@@ -1,20 +1,69 @@
 #' @title getTaxaIDs
-#' @description This function attempts to determine the aphiaIDs (WoRMS) and
-#' TSNs (ITIS) using first the scientific name, and then the common name. If an
-#' aphiaid is found, but no TSN, it will try to find the TSN using the aphiaid.
-#' If a TSN is found, but no aphiaid, it will try to find the aphiaid using the
-#' TSN.
-#' Additionally, in addition to all of the original fields, the returned data
-#' will also include the WoRMS aphiaid, the ITIS TSN, and will indicate the
-#' method used to find each.  Also for each, a field will indicate whether one,
-#' many, or no matches were found.  Lastly, if the species has a different
-#' "accepted name" than the one provided, that will also be returned.
+#' @description This function attempts to determine a definitive AphiaID and TSN
+#' from various web services via some existing R packages including worrms, 
+#' taxize and ritis.
+#' 
+#' It takes a species list with Scientific and Common names and performs checks
+#' in the following order:
+#' \enumerate{
+#'   \item Taxize (for AphiaID): Scientific name
+#'   \item Worrms (for AphiaID): Scientific name
+#'   \item Taxize (for AphiaID): Common name
+#'   \item Worrms (for AphiaID): Common name
+#'   \item Worrms (for TSN): <previously found> AphiaIDs
+#'   \item Ritis (for TSN): Scientific name
+#'   \item Ritis (for TSN): Common name
+#'   }
+#'   
+#' In addition to all of the original fields, the returned data
+#' will include: 
+#' \enumerate{
+#'   \item Aphiaid
+#'   \item Aphiaid_src - which service(s) provided the Aphiaid value
+#'   \item Aphiaid_data - which service(s) provided the Aphiaid value
+#'   \item Aphiaid_definitive* - indicates whether or not we are confident about 
+#'   AphiaID
+#'   \item TSN 
+#'   \item TSN_src - which service(s) provided the TSN value
+#'   \item TSN_data - which service(s) provided the TSN value
+#'   \item TSN_definitive* - indicates whether or not we are confident about 
+#'   TSN
+#'   }
+#' Most webservices can return multiple IDs for a given search term, and the 
+#' results are often identified as "accepted" or not. For this function to 
+#' identify an ID as being definitive=TRUE, one of the following 3 situations 
+#' occurred: 
+#' \itemize{
+#' \item Only a single result was returned from a service
+#' \item Only a single item within a resultset was marked as "Accepted"
+#' \item Two independent services both returned the same ID (These may be 
+#' considered less definitive, and can be recognized by their <>_src fields 
+#' indication multiple sources - e.g. "Both worrms & ritis")
+#' }
+
 #' @param spec_list the dataframe containing information to be decoded to TSN and
 #' aphiaIDs
 #' @param sci_col the name of the column of the dataframe containing the
 #' scientific names
 #' @param comm_col the name of the column of the dataframe containing the
 #' common names
+#' @param filterStrings a vector of regex values that you might want to clean out
+#' of your scientific and common names prior to sending them to a web service.  
+#' For example, some Maritimes names inlude "(NS)", which will prevent services
+#' from finding matches, By adding "\\(NS\\)" (escaping the brackets and periods 
+#' with slashes), we ensure that the results will be as clean as possible prior 
+#' to searching. By default, the following values will be filtered:
+#' \itemize{
+#' \item \\(NS\\)
+#' \item SP\\.
+#' \item S\\.O\\.
+#' \item F\\.
+#' \item UNIDENTIFIED
+#' \item EGGS
+#' \item UNID\\.
+#' \item \\(ORDER\\)
+#' \item \\(SUBORDER\\)
+#' }
 #' @importFrom utils head
 #' @importFrom utils txtProgressBar
 #' @importFrom utils setTxtProgressBar
@@ -26,8 +75,10 @@
 #' @family qc
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 #' @export
-getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALSE){
-# Initial data preparation ------------------------------------------------
+getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterStrings=NULL){
+  filterStrings <- c(filterStrings, "\\(NS\\)", " SP\\.", "S\\.O\\.", "F\\.","UNIDENTIFIED", "EGGS","UNID\\.","\\(ORDER\\)","\\(SUBORDER\\)")
+  
+  # Initial data preparation ------------------------------------------------
   spec_list_orig = spec_list
   if (is.null(comm_col)){
     spec_list<-data.frame("tmpzzz" = spec_list[,sci_col])
@@ -44,36 +95,17 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
   }
   resultFormat = data.frame(internal_name = character(), suggested_name = character(), search_type = character(),src= character(), ID= integer())
   
-  #' "definitive_Aphia" will be our final results where we are confident about our 
-  #' results.  These will include where the series of checks coalesce on a 
-  #' single "accepted" value if one check (e.g. scientific name) finds multiple 
-  #' (or no) ids, another check will be performed (eg common name).  If the 
-  #' follow up check finds a single match, the result will be added to the 
-  #' definitive_Aphia list
-  #' 
-  #' "multiMatches" will hold IDs for which we never found a definitive_Aphia value.  
-  #' For example, if multiple IDS were found in all checks, and no one of them 
-  #' was deemed "accepted", all of these options will be added to multiMatches.  
-  #' Similarly, if all of the checks result in a group of "accepted matches" 
-  #' that are different from one another, the results will also be stored.  The
-  #' expectation is that a human should go through the list of options and 
-  #' pick the best.
-  #' 
   #'_src is where we got the ID (e.g. worrms)
   #'_data is what we used to get the id (e.g. scientific/common name, or another ID)
-  definitive_Aphia <- data.frame(SPEC = character(), AphiaID = integer(), AphiaID_src = character(), AphiaID_data = character())
-  definitive_TSN <- data.frame(SPEC = character(), TSN = integer() ,TSN_src = character(), TSN_data = character())
-  #multimatches will hold alternative id values for species where we found multiple matches
+  #multi_Codes will hold alternative id values for species where we found multiple matches
   multi_Codes <<- data.frame(suggested_name = character(), TSN= integer(), TSN_internal_name = character(), TSN_src= character(), TSN_data = character(),
                              AphiaID_internal_name = character(), AphiaID_src= character(), AphiaID_data = character(), AphiaID= integer() )
-  
   mysterySpec <-spec_list
-  
   #vector of string we can try dropping
-  crapStrings <- c("\\(NS\\)", " SP\\.", "S\\.O\\.", "F\\.","UNIDENTIFIED", "EGGS","UNID\\.","\\(ORDER\\)","\\(SUBORDER\\)")
   
   definitive <- spec_list
-  
+  names(definitive)[names(definitive)==sci_col]<-"SPEC"
+  names(definitive)[names(definitive)==comm_col]<-"COMM"
   definitive$AphiaID_Definitive <- NA
   definitive$AphiaID <- NA
   definitive$AphiaID_src <- NA
@@ -82,21 +114,18 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
   definitive$TSN <- NA
   definitive$TSN_src <- NA
   definitive$TSN_data <- NA
-  #assign("definitive", definitive, envir = .GlobalEnv)
   df_res<-spec_list
-  # ----
+  # Basic helper functions --------------------------------------------------
   
-
-# Basic helper functions --------------------------------------------------
-
   sapply_pb <- function(X, FUN, ...)
   {
-    #this is a progress bar function I can wrap around stuff
+    #'this is a progress bar function I can wrap around stuff
+    #'think I stole it from https://ryouready.wordpress.com/2010/01/11/
+    #'progress-bars-in-r-part-ii-a-wrapper-for-apply-functions/
     env <- environment()
     pb_Total <- length(X)
     counter <- 0
     pb <- txtProgressBar(min = 0, max = pb_Total, style = 3)
-    
     wrapper <- function(...){
       curVal <- get("counter", envir = env)
       assign("counter", curVal +1 ,envir=env)
@@ -108,28 +137,24 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
     res
   }
   
-  
   multiCheck<-function(multi_Codes){
     #update multi_codes to hold only those species for which we don't have a definitve value 
     theseMulti = multi_Codes[(multi_Codes$SPEC %in% definitive[definitive$Is_Definitive==FALSE,"SPEC"]),]
     assign("multi_Codes", theseMulti, envir = .GlobalEnv)
     return(theseMulti)
   }
-  
-# ----
-  
-# Functions for checking web services -------------------------------------
-  chk_taxize <- function(crapStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+ 
+  # Functions for checking web services -------------------------------------
+  chk_taxize <- function(filterStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
     #use taxize functions to check stuff
-    if (debug) cat("\nin chk_taxize") 
     if (searchtype == 'scientific'){
       colname = "SPEC"
     }else{
       colname = "COMM"
     }
     #vector of string we can try dropping
-    if (grepl(paste(crapStrings,collapse="|"),searchterm)==TRUE){
-      tmpTerm = trimws(gsub(paste(crapStrings,collapse="|"),  "", searchterm))
+    if (grepl(paste(filterStrings,collapse="|"),searchterm)==TRUE){
+      tmpTerm = trimws(gsub(paste(filterStrings,collapse="|"),  "", searchterm))
     }else{
       tmpTerm = searchterm
     }
@@ -169,20 +194,17 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
     }
     this = as.data.frame(cbind("SEARCHTERM" = searchterm, "ID_taxize"=ID,"MATCH_taxize"= cmt))
     if (NROW(this[grep("NA due to ask=FALSE", this$MATCH_WORMS),])>0)  this[grep("NA due to ask=FALSE", this$MATCH_WORMS),]$MATCH_WORMS<-"multi match"
-    
-    if (debug) cat("\ndone chk_taxize")
     return(this)
   }
   
-  chk_worrms <- function(crapStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
-    if (debug) cat("\nin chk_worrms")
+  chk_worrms <- function(filterStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
     if (searchtype == 'scientific'){
       colname = "SPEC"
     }else{
       colname = "COMM"
     }
-    if (grepl(paste(crapStrings,collapse="|"),searchterm)==TRUE){
-      tmpTerm = trimws(gsub(paste(crapStrings,collapse="|"),  "", searchterm))
+    if (grepl(paste(filterStrings,collapse="|"),searchterm)==TRUE){
+      tmpTerm = trimws(gsub(paste(filterStrings,collapse="|"),  "", searchterm))
     }else{
       tmpTerm = searchterm
     }
@@ -240,17 +262,15 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
         }
       }
     }
-    if (debug) cat("\ndone chk_worrms")
     #res=list(thisi,multi_Codes)
     return(thisi)
   }
   
-  chk_ritis <- function(crapStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+  chk_ritis <- function(filterStrings, searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
     #use ritis functions to check stuff
-    if (debug) cat("\nin chk_ritis")
     this = resultFormat
-    if (grepl(paste(crapStrings,collapse="|"),searchterm)==TRUE){
-      tmpTerm = trimws(gsub(paste(crapStrings,collapse="|"),  "", searchterm))
+    if (grepl(paste(filterStrings,collapse="|"),searchterm)==TRUE){
+      tmpTerm = trimws(gsub(paste(filterStrings,collapse="|"),  "", searchterm))
     }else{
       tmpTerm = searchterm
     }
@@ -302,13 +322,11 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
       error=function(cond){
       }
     )
-    if (debug) cat("\ndone chk_ritis")
     return(thisi)
   }
-
-# Main Functions ----------------------------------------------------------
+  
+  # Main Functions ----------------------------------------------------------
   assignDefinitive<-function(curDefinitive, results = NULL, searchtype = NULL){
-    if (debug) cat("\nin assignDefinitive")
     if (searchtype =="scientific"){
       searchtypeVal = "scientific name"
       colname = "SPEC"
@@ -320,13 +338,13 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
       theID = "AphiaID"
       theIDComment = "AphiaID_src"
       theIDUsed = "AphiaID_data"
-      defTableName = "definitive_Aphia"
+      #defTableName = "definitive_Aphia"
       isDefFlag = "AphiaID_Definitive"
       
       otherTheID = "TSN"
       otherTheIDComment = "TSN_src"
       otherTheIDUsed = "TSN_data"
-      otherDefTableName = "definitive_TSN"
+      #otherDefTableName = "definitive_TSN"
       otherIsDefFlag = "TSN_Definitive"
       if (any(grep("taxize",colnames(results)))){
         results_ID = "ID_taxize"
@@ -338,17 +356,16 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
         results_type = "Worrms"
       }
     }else if (any(grep("ritis",colnames(results)))){
-      #if (colname =="COMM") browser()
       theID = "TSN"
       theIDComment = "TSN_src"
       theIDUsed = "TSN_data"
-      defTableName = "definitive_TSN"
+      #defTableName = "definitive_TSN"
       isDefFlag = "TSN_Definitive"
       
       otherTheID = "AphiaID"
       otherTheIDComment = "AphiaID_src"
       otherTheIDUsed = "AphiaID_data"
-      otherDefTableName = "definitive_Aphia"
+      #otherDefTableName = "definitive_Aphia"
       otherIsDefFlag = "AphiaID_Definitive"
       
       results_ID = "ID_ritis"
@@ -369,115 +386,111 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
       results[!is.na(results[,results_ID]) & !(results[,isDefFlag] %in% TRUE),isDefFlag]   <-FALSE
       results[!is.na(results[,results_ID]),][theID] <- results[!is.na(results[,results_ID]),][results_ID]
     }
-    #'if I can match the currently found, non-definitive ID (e.g. for common name) 
-    #'with another, non-definitive ID (e.g. scientific name), I'm calling it definitive
     
     results <-results[,c("SEARCHTERM",theID,theIDComment,theIDUsed, isDefFlag)]
     names(results)[names(results) == 'SEARCHTERM'] <- colname
     
-    if((nrow(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),])>0) & nrow(results[!is.na(results[,isDefFlag]),])>0){
-      #need to handle integrating new and existing results
-      #get codes that have been found this time around, and see if any already have tentative values
-      
-      
+    multimatches = 
+    
+    replacers = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
+                      results[results[,isDefFlag] %in% TRUE,], by=colname)
+    replacers[,'thisID'] <- replacers[paste0(theID,".y")]
+    doubleblind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
+                        results[results[,isDefFlag] %in% FALSE,], by=colname)
+    doubleblind[,'thisID'] <- doubleblind[paste0(theID,".y")]
+    newFind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(NA)),][c(colname,theID)], 
+                    results[results[,isDefFlag] %in% c(TRUE,FALSE),], by=colname)
+    newFind[,'thisID'] <- newFind[paste0(theID,".y")]
+    
       #if the new codes are definitive, we will replace the existing (not-definitive) ones entirely 
-        replacers = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
-                     results[results[,isDefFlag] %in% TRUE,], by=theID)
-
-        
-        if (nrow(replacers)>0){
-          curDefinitive[curDefinitive[,theID] %in% replacers[,theID],c(theIDComment,theIDUsed)]<-NA
-          curDefinitive[curDefinitive[,theID] %in% replacers[,theID],][c(theIDComment,theIDUsed)]<-replacers[c(theIDComment,theIDUsed)]
-          curDefinitive[curDefinitive[,theID] %in% replacers[,theID],isDefFlag]<-TRUE
-        }
-        #if we have already have a tentative code, and our new result set gives the same code,
-        #we will call it definitive        
-        doubleblind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
-                        results[results[,isDefFlag] %in% FALSE,], by=theID)
-        #doubleblind = doubleblind[doubleblind[,isDefFlag] %in% FALSE,]
-        if (nrow(doubleblind)>0){
-          for (i in 1:nrow(doubleblind)){
-            curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,theID] %in% doubleblind[,theID],][i,theIDComment]<-
-              paste("Both",curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,theID] %in% doubleblind[,theID],][i,theIDComment], "&",doubleblind[theIDComment][i,])  #c(theIDComment,theIDUsed)]<-NA
-            curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,theID] %in% doubleblind[,theID],isDefFlag]<-TRUE
-          }
-        }
-    }else if (all(is.na(curDefinitive[,isDefFlag]))){
-      #just adding new stuff - we don't have anything yet
-      
-      if (nrow(results[results[,isDefFlag] %in% c(TRUE,FALSE),])>0){
-        curDefinitive = merge(curDefinitive[!(names(curDefinitive) %in% excludes)], results, all=T)
+      if (nrow(replacers)>0){
+        curDefinitive[curDefinitive[,colname] %in% replacers[,colname],c(theIDComment,theIDUsed, isDefFlag)]<-
+          replacers[c(theIDComment,theIDUsed,isDefFlag)]
       }
-    }else{
-      browser("unhandled results")
-    }
-    if (debug) cat("\ndone assignDefinitive")
+      #if we have already have a tentative code, and our new result set gives the same code,
+      #we will call it definitive        
+       if (nrow(doubleblind)>0){
+         for (i in 1:nrow(doubleblind)){
+                           curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,colname] %in% doubleblind[,colname],][i,theIDComment]<-
+              paste("Both",curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,colname] %in% doubleblind[,colname],theIDComment][i], "&",doubleblind[i,theIDComment])  #c(theIDComment,theIDUsed)]<-NA
+         }
+         curDefinitive[curDefinitive[,isDefFlag] %in% FALSE & curDefinitive[,colname] %in% doubleblind[,colname],isDefFlag]<-TRUE
+       } 
+      #just adding new stuff - we don't have anything yet
+      if (nrow(newFind)>0){
+        curDefinitive[curDefinitive[,isDefFlag] %in% NA & curDefinitive[,colname] %in% newFind[,colname],][,c(theID,theIDComment,theIDUsed, isDefFlag)]<-
+          newFind[,c("thisID",theIDComment,theIDUsed, isDefFlag)]
+      }
     return(curDefinitive)
   }   
+  checkAndCompareTSN<-function(filterStrings=filterStrings, definitive=definitive, df=NULL, searchtype = NULL){
+    if (searchtype =="scientific"){
+      searchtypeVal = "scientific name"
+      colname = "SPEC"
+    }else{
+      searchtypeVal = "common name"
+      colname = "COMM"
+    }
+    print(paste("...Checking ritis using ",searchtype," names"))
+    no_TSN = definitive[definitive$TSN_Definitive %in% c(NA, FALSE),]
+    if (nrow(no_TSN)>0) {
+      #print(colnames(no_TSN))
+      no_TSN = as.data.frame(t(sapply_pb(no_TSN[,colname],chk_ritis, filterStrings = filterStrings, searchtype=searchtype)))
+      no_TSNKeep<<-no_TSN
+      definitiveKeep<<-definitive
+      names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis")
+      definitive = assignDefinitive(definitive,no_TSN, searchtype)
+    }
+    return(definitive)
+  }
   
-  checkAndCompare<-function(definitive, df= NULL, searchtype = NULL){
-    if (debug) cat("\nin checkAndCompare")
+  checkAndCompareAphiaID<-function(definitive, df= NULL, searchtype = NULL){
     if (searchtype =="scientific"){
       colname = "SPEC"
     }else{
       colname = "COMM"
     }
     df=merge(df,spec_list)
-    
-    # check for matches based on sci name, then common name (if provided)
 
-    cat(paste("\tChecking using ",searchtype," names\n"))
-    aph_cont = TRUE    
-    
     no_aphiaID = df[!(df$AphiaID_Definitive %in% TRUE),]
-    if (nrow(no_aphiaID)==0)aph_cont=FALSE
-    if (aph_cont) cat("\tagainst taxize (AphiaID)\n")
-    if (aph_cont) no_aphiaID = as.data.frame(t(sapply_pb(no_aphiaID[,colname],chk_taxize, crapStrings = crapStrings, searchtype=searchtype)))
-    if (nrow(no_aphiaID)==0) aph_cont = FALSE
-    if (aph_cont) no_aphiaID = data.frame("SEARCHTERM" = toupper(unlist(no_aphiaID$SEARCHTERM)),
-                       "ID_taxize" = unlist(no_aphiaID$ID_taxize),
-                       "MATCH_taxize" = unlist(no_aphiaID$MATCH_taxize))
-    if (aph_cont) definitive = assignDefinitive(definitive,no_aphiaID, searchtype)
-    if (aph_cont) not_definitive = definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
-    if (nrow(not_definitive)==0) aph_cont = FALSE
-    if (aph_cont) cat("\tagainst worrms (AphiaID)\n")
-
-   # m=t(sapply_pb(no_aphiaID[,colname],chk_worrms, searchtype=searchtype))
-
-    if (aph_cont) not_definitive = as.data.frame(t(sapply_pb(not_definitive[,colname],chk_worrms, crapStrings = crapStrings, searchtype=searchtype)))
-    if (nrow(not_definitive)==0) aph_cont = FALSE
-    names(not_definitive)<-c("SEARCHTERM", "ID_worrms", "MATCH_worrms")
-    if (aph_cont) not_definitive = data.frame("SEARCHTERM" = toupper(unlist(not_definitive$SEARCHTERM)),
-                       "ID_worrms" = unlist(not_definitive$ID_worrms),
-                       "MATCH_worrms" = unlist(not_definitive$MATCH_worrms))
-
-    if (aph_cont) definitive = assignDefinitive(definitive,not_definitive, searchtype)
-    if (aph_cont) not_definitive =  definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
-    if (nrow(not_definitive)==0) aph_cont = FALSE
-#     browser()
-
-  #if (nrow(definitive[!(definitive$AphiaID_Definitive %in% TRUE),])==0) cat("\nAll species identified\n")
+    
+    if (nrow(no_aphiaID)>0) {
+      print(paste0("...against taxize using ",searchtype," names"))
+      no_aphiaID = as.data.frame(t(sapply_pb(no_aphiaID[,colname],chk_taxize, filterStrings = filterStrings, searchtype=searchtype)))
+    }
+    if (nrow(no_aphiaID)>0) {
+      no_aphiaID = data.frame("SEARCHTERM" = toupper(unlist(no_aphiaID$SEARCHTERM)),
+                              "ID_taxize" = unlist(no_aphiaID$ID_taxize),
+                              "MATCH_taxize" = unlist(no_aphiaID$MATCH_taxize))
+      definitive = assignDefinitive(definitive,no_aphiaID, searchtype)
+      not_definitive = definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
+      if (nrow(not_definitive)>0){
+        print(paste0("...against worrms using ",searchtype," names"))
+        not_definitive = as.data.frame(t(sapply_pb(not_definitive[,colname],chk_worrms, filterStrings = filterStrings, searchtype=searchtype)))
+        names(not_definitive)<-c("SEARCHTERM", "ID_worrms", "MATCH_worrms")
+        not_definitive = data.frame("SEARCHTERM" = toupper(unlist(not_definitive$SEARCHTERM)),
+                                    "ID_worrms" = unlist(not_definitive$ID_worrms),
+                                    "MATCH_worrms" = unlist(not_definitive$MATCH_worrms))
+        definitive = assignDefinitive(definitive,not_definitive, searchtype)
+      }
+    }
     return(definitive)
-}  
-
-
-# Start of the actual processing ------------------------------------------
-  cat("\nLooking for AphiaIDs\n")
-  definitive = checkAndCompare(definitive, df = definitive,searchtype="scientific")
+  }  
+  
+  
+  # Start of the actual processing ------------------------------------------
+  print("Looking for AphiaIDs")
+  definitive = checkAndCompareAphiaID(definitive, df = definitive,searchtype="scientific")
   missing = definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
   multi_Codes = multiCheck(multi_Codes)
-  if (!is.null(missing)){
-    if (nrow(missing)>0){
-    #cat("\nChecking ambiguously and unmatched records using Common names\n")
-    definitive = checkAndCompare(definitive, df = missing,searchtype="common")
+  if (nrow(missing)>0){
+    definitive = checkAndCompareAphiaID(definitive, df = missing,searchtype="common")
     multi_Codes = multiCheck(multi_Codes)
-    }
   }
   # #have lots of aphias - try to use them to get TSNs
-  # #do the definitive first
+  print("Looking for TSNs")
+  print("...Checking worrms using AphiaIDs")
   if (!is.null(definitive)){
-    cat("\nLooking for TSNs using the discovered AphiaIDs\n")
-    cat("\tagainst worrms\n")
     TSNsFromAphiasDef = sapply_pb(definitive$AphiaID,chk_worrmsTSN)
     TSNsFromAphiasDef = data.frame("TSN" = unique(do.call("rbind", lapply(TSNsFromAphiasDef, "[[", 1))))
     TSNsFromAphiasDef$Aphia_ID = gsub("\\..*","",rownames(TSNsFromAphiasDef))
@@ -488,11 +501,19 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
     if (nrow(definitive[definitive$AphiaID %in% TSNsFromAphiasDef$AphiaID,])>0){
       definitive[definitive$AphiaID %in% TSNsFromAphiasDef$AphiaID,c("TSN","TSN_src","TSN_data")] = merge(definitive[definitive$AphiaID %in% TSNsFromAphiasDef$AphiaID,], TSNsFromAphiasDef, by.x="AphiaID", by.y="AphiaID")[,c("TSN.y","TSN_src.y","TSN_data.y")]
       definitive[definitive$AphiaID %in% TSNsFromAphiasDef$AphiaID,"TSN_Definitive"]<-FALSE
-           }
-}
+    }
+  }
+  #try to find remaining TSNs using sci and comm names
  
+  definitive = checkAndCompareTSN(filterStrings, definitive, df=definitive, searchtype="scientific")
+  missingTSN = definitive[!(definitive$TSN_Definitive %in% TRUE),]
+  if (nrow(missingTSN)>0){
+    definitive = checkAndCompareTSN(filterStrings, definitive, df=missingTSN, searchtype="common")
+  }
+  
+  multi_Codes = multiCheck(multi_Codes)
   if (nrow(multi_Codes)>0){
-    cat("\n\tfor the multimatch aphias")
+    print("looking for the multimatch aphias")
     TSNsFromAphiasMulti = sapply_pb(multi_Codes$AphiaID,chk_worrmsTSN)
     TSNsFromAphiasMulti = data.frame("TSN" = unique(do.call("rbind", lapply(TSNsFromAphiasMulti, "[[", 1))))
     TSNsFromAphiasMulti$Aphia_ID = rownames(TSNsFromAphiasMulti)
@@ -504,38 +525,19 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, debug = FALS
       multi_Codes[multi_Codes$AphiaID %in% TSNsFromAphiasMulti$AphiaID,c("TSN","TSN_src","TSN_data")] = merge(multi_Codes[multi_Codes$AphiaID %in% TSNsFromAphiasMulti$AphiaID,], TSNsFromAphiasMulti, by.x="AphiaID", by.y="AphiaID")[,c("TSN.y","TSN_src.y","TSN_data.y")]
     }
   }
-  ###
-  ###----------
-  if (!is.null(definitive)){
-  cat("\nLooking for TSNs")
-  tsn_cont = TRUE
-     if (tsn_cont) no_TSN = definitive[definitive$TSN_Definitive %in% c(NA, FALSE),]
-     if (tsn_cont) cat("\n\tagainst ritis")
-     if (tsn_cont) cat("\n\tusing scientific names")
-     if (tsn_cont) no_TSN = as.data.frame(t(sapply_pb(no_TSN[,"SPEC"],chk_ritis, crapStrings = crapStrings, searchtype="scientific")))
-     if (tsn_cont) names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis")
-     if (nrow(no_TSN)==0) tsn_cont = FALSE
-     if (tsn_cont) definitive = assignDefinitive(definitive,no_TSN, searchtype="scientific")
-
-      no_TSN = definitive[definitive$TSN_Definitive %in% c(NA, FALSE),]
-      multi_Codes = multiCheck(multi_Codes)
-      if (!is.null(no_TSN)){
-        if (tsn_cont) cat("\n\tusing common names")
-        no_TSN = as.data.frame(t(sapply_pb(no_TSN[,"COMM"],chk_ritis, crapStrings = crapStrings, searchtype="common")))
-        if (tsn_cont) names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis")
-        if (nrow(no_TSN)==0) tsn_cont = FALSE
-        if (tsn_cont) no_TSN = assignDefinitive(definitive,no_TSN, searchtype="common")
-        if (nrow(no_TSN)==0) tsn_cont = FALSE
-        multi_Codes = multiCheck(multi_Codes)
-      }
-}
-
-  #missing = definitive[definitive$Is_Definitive == FALSE,]
-  mysterySpecCln = mysterySpec[mysterySpec$SPEC %in% (unique(c(definitive[definitive$TSN_Definitive,"SPEC"], definitive[definitive$AphiaID_Definitive,"SPEC"]))),"SPEC"]
+  
+    multi_Codes= multiCheck(multi_Codes)
+  if (nrow(multi_Codes)>0){
+     cat("\nReview the contents of 'multi_Codes', as some matches were not definitive, and have alternates you should consider\n")
+  }else{
+    rm(multi_Codes)
+  }
+    
+  mysterySpecCln = mysterySpec[mysterySpec$SPEC %in% (unique(c(definitive[definitive$TSN_Definitive %in% c(NA,FALSE),"SPEC"], definitive[definitive$AphiaID_Definitive %in% c(NA,FALSE),"SPEC"]))),"SPEC"]
   assign("mysterySpec", mysterySpecCln, envir = .GlobalEnv)
-  multi_Codes= multiCheck(multi_Codes)
-  if (nrow(multi_Codes)>0)cat("\nReview the contents of 'multi_Codes', as some matches were not definitive, and have alternates you should consider\n")
-  rm(multi_Codes)
-  return(definitive)
+  names(definitive)[names(definitive)=="SPEC"]<-sci_col
+  names(definitive)[names(definitive)=="COMM"]<-comm_col
+  res = merge(spec_list_orig, definitive, by=c(sci_col,comm_col))
+  return(res)
 }  
 
