@@ -24,15 +24,12 @@ from finding matches, By adding "\\(NS\\)" (escaping the brackets and periods
 with slashes), we ensure that the results will be as clean as possible prior 
 to searching. By default, the following values will be filtered:
 \itemize{
-\item \\(NS\\)
-\item SP\\.
-\item S\\.O\\.
-\item F\\.
-\item UNIDENTIFIED
-\item EGGS
-\item UNID\\.
-\item \\(ORDER\\)
-\item \\(SUBORDER\\)
+\item \\(.*?\\) -removes thing in brackets (e.g "(NS)")
+\item *\\b[^'][[:alpha:]]{1,2}\\.?\\b* - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
+\item \\,\\s?(SMALL|LARGE) - removes instances like ",SMALL"
+\item UNIDENTIFIED - removes the word "UNIDENTIFIED"
+\item UNID\\. - removes the word "UNID."
+\item EGGS - removes the word "EGSS"
 }}
 }
 \description{
@@ -79,12 +76,12 @@ indication multiple sources - e.g. "Both worrms & ritis")
 }
 }
 \note{
-remove potential confusion from CASE sensitivity
 _src is where we got the ID (e.g. worrms)
 _data is what we used to get the id (e.g. scientific/common name, or another ID)
 this is a progress bar function I can wrap around stuff
 think I stole it from https://ryouready.wordpress.com/2010/01/11/
 progress-bars-in-r-part-ii-a-wrapper-for-apply-functions/
+did something get deleted here?!
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}
