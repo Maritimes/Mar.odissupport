@@ -102,18 +102,15 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   
   resultFormat = data.frame(internal_name = character(), suggested_name = character(), search_type = character(),src= character(), ID= integer())
   
-  #'_src is where we got the ID (e.g. worrms)
-  #'_data is what we used to get the id (e.g. scientific/common name, or another ID)
-  #multi_Codes will hold alternative id values for species where we found multiple matches
-  multi_Codes <<- data.frame(suggested_name = character(), TSN= integer(), TSN_internal_name = character(), TSN_src= character(), TSN_data = character(),
+   multi_Codes <<- data.frame(suggested_name = character(), TSN= integer(), TSN_internal_name = character(), TSN_src= character(), TSN_data = character(),
                              AphiaID_internal_name = character(), AphiaID_src= character(), AphiaID_data = character(), AphiaID= integer() )
   # Basic helper functions --------------------------------------------------
   
   sapply_pb <- function(X, FUN, ...)
   {
-    #'this is a progress bar function I can wrap around stuff
-    #'think I stole it from https://ryouready.wordpress.com/2010/01/11/
-    #'progress-bars-in-r-part-ii-a-wrapper-for-apply-functions/
+    #this is a progress bar function I can wrap around stuff
+    #think I stole it from https://ryouready.wordpress.com/2010/01/11/
+    #progress-bars-in-r-part-ii-a-wrapper-for-apply-functions/
     env <- environment()
     pb_Total <- length(X)
     counter <- 0
@@ -367,7 +364,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     names(results)[names(results) == 'SEARCHTERM'] <- colname
     
     #multimatches = 
-    #'did something get deleted here?!
+    #did something get deleted here?!
  
     #just adding new stuff - we don't have anything yet
     newFind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(NA)),][c(colname,theID)], results[results[,isDefFlag] %in% c(TRUE,FALSE),], by=colname)
