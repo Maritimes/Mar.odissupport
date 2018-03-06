@@ -55,7 +55,7 @@
 #' to searching. By default, the following values will be filtered:
 #' \itemize{
 #' \item \\(.*?\\) -removes thing in brackets (e.g "(NS)")
-#' \item *\\b[^'][[:alpha:]]{1,2}\\.?\\b* - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
+#' \item \\b[a-zA-Z]{1,2}\\. - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
 #' \item \\,\\s?(SMALL|LARGE) - removes instances like ",SMALL"
 #' \item UNIDENTIFIED - removes the word "UNIDENTIFIED"
 #' \item UNID\\. - removes the word "UNID."
@@ -74,20 +74,17 @@
 #' @export
 #' @note
 getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterStrings=NULL){
-  filterStrings <- c(filterStrings,"\\(.*?\\)", "*\\b[^'][[:alpha:]]{1,2}\\.?\\b*","\\,\\s?(SMALL|LARGE)","UNIDENTIFIED", "EGGS","UNID\\.")
-  #filtering 3 letter words like eel?
-  
+  filterStrings <- c(filterStrings,"\\(.*?\\)", "(\\b[a-zA-Z]{1,2}\\.)","\\,\\s?(SMALL|LARGE)","-?UNIDENTIFIED", "\\,?\\s?EGGS-?","-?UNID\\.","PURSE\\s")
   # Initial data preparation ------------------------------------------------
   spec_list_orig <- spec_list  
   names(spec_list)[names(spec_list)==sci_col]<-"SPEC_ORIG"
   names(spec_list)[names(spec_list)==comm_col]<-"COMM_ORIG"
-  
-  #clean up our names using the filterstrings
+  spec_list$trackID <- seq.int(nrow(spec_list))
   spec_list$SPEC=trimws(gsub(paste(filterStrings,collapse="|"),  " ", spec_list$SPEC_ORIG))
   spec_list$COMM=trimws(gsub(paste(filterStrings,collapse="|"),  " ", spec_list$COMM_ORIG))
- # <- mysterySpec <- definitive <- 
-  #vector of string we can try dropping
-  definitive <- spec_list[,c("SPEC","COMM","SPEC_ORIG")]
+
+  definitive <- spec_list[,c("trackID","SPEC","COMM")]
+  definitive<-definitive[!nchar(definitive$SPEC)==0,] 
   definitive$AphiaID_Definitive <- NA
   definitive$AphiaID <- NA
   definitive$AphiaID_src <- NA
@@ -98,8 +95,6 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   definitive$TSN_data <- NA
  
   mysterySpec <-definitive
-  #vector of string we can try dropping
-  
   resultFormat = data.frame(internal_name = character(), suggested_name = character(), search_type = character(),src= character(), ID= integer())
   
    multi_Codes <<- data.frame(suggested_name = character(), TSN= integer(), TSN_internal_name = character(), TSN_src= character(), TSN_data = character(),
@@ -127,21 +122,21 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   }
   
   multiCheck<-function(multi_Codes, definitive, theCode){
-
+if (nrow(multi_Codes)>0)browser()
     #update multi_codes to hold only those species for which we don't have a definitve value 
-    theseMulti = multi_Codes[(multi_Codes$SPEC %in% definitive[definitive[,theCode] %in% c(NA,FALSE),"SPEC"]),]
+    theseMulti = multi_Codes[(multi_Codes$trackID %in% definitive[definitive[,theCode] %in% c(NA,FALSE),"trackID"]),]
     assign("multi_Codes", theseMulti, envir = .GlobalEnv)
     return(theseMulti)
   }
  
   # Functions for checking web services -------------------------------------
-  chk_taxize <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+  chk_taxize <- function(info = NULL,searchtype='scientific', ask=FALSE, verbose=FALSE){
+    info=strsplit(info,"\\$\\$\\$")
+    searchterm=info[[1]][1]
+    trackID=info[[1]][2]
+    
     #use taxize functions to check stuff
-    if (searchtype == 'scientific'){
-      colname = "SPEC"
-    }else{
-      colname = "COMM"
-    }
+    colname= ifelse(searchtype =="scientific","SPEC","COMM")
     this <- tryCatch(
       {
         taxize::get_wormsid(query=searchterm, searchtype=searchtype, ask=ask, verbose=verbose, accepted = TRUE,rows = 1, messages =FALSE)
@@ -157,6 +152,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
       if (attr(this,"match")=="found" & attr(this,"multiple_matches") == TRUE) {
         cmt = "multi match - kept 1st accepted"
         mult = spec_list[spec_list[,colname] == searchterm,]
+        #mult$trackID = trackID
         mult$AphiaID = ID
         mult$AphiaID_src = "Taxize"
         mult$AphiaID_data = searchtype
@@ -180,22 +176,21 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
         cmt = "multi match - no ids returned"
       }
     }
-    this = as.data.frame(cbind("SEARCHTERM" = searchterm, "ID_taxize"=ID,"MATCH_taxize"= cmt))
+    this = as.data.frame(cbind("SEARCHTERM" = searchterm, "ID_taxize"=ID,"MATCH_taxize"= cmt, trackID= trackID))
     if (NROW(this[grep("NA due to ask=FALSE", this$MATCH_WORMS),])>0)  this[grep("NA due to ask=FALSE", this$MATCH_WORMS),]$MATCH_WORMS<-"multi match"
     return(this)
   }
   
-  chk_worrms <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
-    if (searchtype == 'scientific'){
-      colname = "SPEC"
-    }else{
-      colname = "COMM"
-    }
+  chk_worrms <- function(info = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+    info=strsplit(info,"\\$\\$\\$")
+    searchterm=info[[1]][1]
+    trackID=info[[1]][2]
+    colname= ifelse(searchtype =="scientific","SPEC","COMM")
     resName = "scientificname"
     if (searchtype == 'scientific'){
       thisi <- tryCatch(
         {
-          worrms::wm_records_name(searchterm, marine_only = T)
+          worrms::wm_records_name(searchterm, fuzzy=T, marine_only = T)
         },
         error=function(cond){
         }
@@ -203,57 +198,57 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     }else{
       thisi <- tryCatch(
         {
-          worrms::wm_records_common(searchterm, marine_only = T)
+          worrms::wm_records_common(searchterm, fuzzy=T,marine_only = T)
         },
         error=function(cond){
         }
       )
     }
-    crapRec = data.frame("SEARCHTERM" = searchterm, "ID_worrms" = NA, "MATCH_worrms" = "not found")
+    crapRec = data.frame("SEARCHTERM" = searchterm, "ID_worrms" = NA, "MATCH_worrms" = "not found","trackID"= trackID)
     if (is.null(thisi)) {
       thisi <- crapRec
     } else if (nrow(thisi)==0) {
       thisi <- crapRec
     }else if (nrow(thisi)==1) {
-      thisi = cbind("SEARCHTERM"= searchterm,"ID_worrms" = thisi$AphiaID, "MATCH_worrms" = "single match")
+      thisi = cbind("SEARCHTERM"= searchterm,"ID_worrms" = thisi$valid_AphiaID, "MATCH_worrms" = "single match","trackID"= trackID)
     }else{
       if (nrow(thisi[thisi$status=="accepted",])==1){
         #maybe need merge thisi with speclist?
-        thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi[thisi$status=="accepted","AphiaID"], "MATCH_worrms" = "multi match - kept only accepted")
+        thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi[thisi$status=="accepted","valid_AphiaID"], "MATCH_worrms" = "multi match - kept only accepted","trackID"= trackID)
         colnames(thisi)[colnames(thisi)=="AphiaID"] <- "ID_worrms"
       } else {
-        mult = thisi[,c(resName,"AphiaID")]
+        mult = thisi[,c("scientificname","valid_AphiaID")]
         colnames(mult)<-c("suggested_name","AphiaID")
         mult$AphiaID_src = "worrms"
-        mult$joiner = searchterm
         mult$AphiaID_internal_name = searchterm
         mult$AphiaID_data = searchtype
         mult$TSN_internal_name = NA
         mult$TSN_src = NA
         mult$TSN_data = NA
+        mult$trackID = trackID
         # mult$TSN = NA
-        spec_list$joinerx<-spec_list[,colname]
-        mult = merge(spec_list, mult, by.x="joinerx", by.y="joiner")
+        mult = merge(spec_list, mult, by.x="trackID", by.y="trackID")
         mult$SPEC<-NULL
         mult$COMM<-NULL
         names(mult)[names(mult) == 'SPEC_ORIG'] <- 'SPEC'
         names(mult)[names(mult) == 'COMM_ORIG'] <- 'COMM'
-        mult$joinerx<-NULL
-        mult$joiner = NULL
         multi_Codes <- rbind(.GlobalEnv$multi_Codes, mult)
         assign("multi_Codes", multi_Codes, envir = .GlobalEnv)
         if (nrow(thisi[thisi$status=="accepted",])>1) {
-          thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi$AphiaID[1], "MATCH_worrms" = "multi match - kept 1st accepted")
+          thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi$AphiaID[1], "MATCH_worrms" = "multi match - kept 1st accepted","trackID"= trackID)
         }else {
-          thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi$AphiaID[1], "MATCH_worrms" = "multi match - none accepted; retained first")
+          thisi = cbind("SEARCHTERM" = searchterm,"ID_worrms" = thisi$AphiaID[1], "MATCH_worrms" = "multi match - none accepted; retained first","trackID"= trackID)
         }
       }
     }
     return(thisi)
   }
   
-  chk_ritis <- function(searchterm = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
-    #use ritis functions to check stuff
+  chk_ritis <- function(info = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+    info=strsplit(info,"\\$\\$\\$")
+    searchterm=info[[1]][1]
+    trackID=info[[1]][2]
+    
     this = resultFormat
     if (searchtype == 'scientific'){
       resName = "combinedName"
@@ -262,34 +257,39 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     }else{
       resName = "commonName"
       colname = "COMM"
+      if (searchterm=="WHALES")browser()
       thisi = as.data.frame(ritis::search_common(searchterm, wt = "json", raw = FALSE))
     }
     if (nrow(thisi)==0) {
-      thisi=data.frame("SEARCHTERM" = searchterm, "ID_ritis" = NA, "MATCH_ritis" = "not found")
+      thisi=data.frame("SEARCHTERM" = searchterm, "ID_ritis" = NA, "MATCH_ritis" = "not found","trackID"= trackID)
     }else if (nrow(thisi)==1) {
-      thisi = cbind("SEARCHTERM"= searchterm,"ID_ritis" = thisi$tsn, "MATCH_ritis" = "single match")
+      thisi = cbind("SEARCHTERM"= searchterm,"ID_ritis" = thisi$tsn, "MATCH_ritis" = "single match","trackID"= trackID)
     }else{
       thisi[,resName]<-toupper(thisi[,resName])
       mult = thisi[,c(resName,"tsn")]
       colnames(mult)<-c("suggested_name","TSN")
       mult$TSN_internal_name = searchterm
-      mult$joiner = searchterm
+      #mult$joiner = searchterm
       mult$TSN_src = "ritis"
       mult$TSN_data = searchtype
       mult$AphiaID_internal_name = NA
       mult$AphiaID_src = NA
       mult$AphiaID_data = NA
       mult$AphiaID = NA
-      mult = merge(mult,spec_list, by.x = "joiner", by.y = colname) 
+      mult$trackID = trackID
+      mult = merge(spec_list, mult, by.x="trackID", by.y="trackID")
+      mult$SPEC<-NULL
+      mult$COMM<-NULL
+      names(mult)[names(mult) == 'SPEC_ORIG'] <- 'SPEC'
+      names(mult)[names(mult) == 'COMM_ORIG'] <- 'COMM'
       mult$TSN<-mult$TSN.x
       mult$TSN.x<-NULL
       mult$TSN.y<-NULL
-      mult$joiner = NULL
       #multi_Codes <<- rbind(multi_Codes, mult)
       if (length(thisi[thisi[,resName] == searchterm,"tsn"])==1){
-        thisi = cbind("SEARCHTERM"=searchterm, "ID_ritis" = thisi[thisi[,resName] == searchterm,"tsn"], "MATCH_ritis" ="multi match - retained identical spelling")
+        thisi = cbind("SEARCHTERM"=searchterm, "ID_ritis" = thisi[thisi[,resName] == searchterm,"tsn"], "MATCH_ritis" ="multi match - retained identical spelling","trackID"= trackID)
       }else{
-        thisi = cbind("SEARCHTERM"=searchterm, "ID_ritis" =thisi$tsn[1], "MATCH_ritis" ="multi match - no identical spelling; retained first")
+        thisi = cbind("SEARCHTERM"=searchterm, "ID_ritis" =thisi$tsn[1], "MATCH_ritis" ="multi match - no identical spelling; retained first","trackID"= trackID)
       }
     }
     return(thisi)
@@ -308,12 +308,16 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   
   # Main Functions ----------------------------------------------------------
   assignDefinitive<-function(curDefinitive, results = NULL, searchtype = NULL){
-    if (searchtype =="scientific"){
-      searchtypeVal = "scientific name"
-      colname = "SPEC"
-    }else{
-      searchtypeVal = "common name"
-      colname = "COMM"
+    colname= ifelse(searchtype =="scientific","SPEC","COMM")
+    searchtypeVal= ifelse(colname =="SPEC","scientific name","common name")
+
+    if(!any(grep("trackID",colnames(curDefinitive)))){
+      curDefinitive$searchterm<-NA
+      curDefinitive$trackID<-NA
+      for (i in 1:nrow(curDefinitive)){
+      curDefinitive[i,"searchterm"]=strsplit(curDefinitive[,colname],"\\$\\$\\$")[[i]][1]
+      curDefinitive[i,"trackID"]=strsplit(curDefinitive[,colname],"\\$\\$\\$")[[i]][2]
+      }
     }
     if(any(grep("taxize",colnames(results))) |(any(grep("worrms",colnames(results))) )){
       theID = "AphiaID"
@@ -360,47 +364,55 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
       results[!is.na(results[,results_ID]) & !(results[,isDefFlag] %in% TRUE),isDefFlag]   <-FALSE
       results[!is.na(results[,results_ID]),][theID] <- results[!is.na(results[,results_ID]),][results_ID]
     }
-    results <-results[,c("SEARCHTERM",theID,theIDComment,theIDUsed, isDefFlag)]
+    results <-results[,c("SEARCHTERM","trackID", theID,theIDComment,theIDUsed, isDefFlag)]
     names(results)[names(results) == 'SEARCHTERM'] <- colname
     
     #multimatches = 
     #did something get deleted here?!
  
     #just adding new stuff - we don't have anything yet
-    newFind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(NA)),][c(colname,theID)], results[results[,isDefFlag] %in% c(TRUE,FALSE),], by=colname)
+
+    newFind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(NA)),][c("trackID",theID)], 
+                    results[results[,isDefFlag] %in% c(TRUE,FALSE),], by="trackID")
     newFind[,'thisID'] <- newFind[paste0(theID,".y")]
-    
+     
     #if the new codes are definitive, we will replace the existing (not-definitive) ones entirely 
-    replacers = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
-                      results[results[,isDefFlag] %in% TRUE,], by=colname)
+
+    replacers = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c("trackID",theID)], 
+                      results[results[,isDefFlag] %in% TRUE,], by="trackID")
     replacers[,'thisID'] <- replacers[paste0(theID,".y")]
-    
+          
     #if we have already have a tentative code, and our new result set gives the same code,
     #we will call it definitive   
-   
-    doubleblind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c(colname,theID)], 
-                        results[results[,isDefFlag] %in% FALSE,], by=colname)
+
+    doubleblind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c("trackID",theID)], 
+                        results[results[,isDefFlag] %in% FALSE,], by="trackID")
     doubleblind[,'thisID'] <- doubleblind[paste0(theID,".y")]    
+     
     
     newCurDef<-curDefinitive
     repCurDef<-curDefinitive
     dbCurDef<-curDefinitive
     
+
     if (nrow(newFind)>0){
-      newCurDef = merge(newCurDef[,!(names(newCurDef) %in% c(theID,theIDComment,theIDUsed, isDefFlag))], newFind[,(names(newFind) %in% c("thisID",colname,theIDComment,theIDUsed, isDefFlag))], by=colname)
+      newCurDef = merge(newCurDef[,!(names(newCurDef) %in% c(theID,theIDComment,theIDUsed, isDefFlag))], 
+                        newFind[,(names(newFind) %in% c("thisID","trackID",theIDComment,theIDUsed, isDefFlag))], by="trackID")
       names(newCurDef)[names(newCurDef) == 'thisID'] <- theID
     }else{
       newCurDef <- newCurDef[0,]
     }
     if (nrow(replacers)>0){
-      repCurDef = merge(repCurDef[,!(names(repCurDef) %in% c(theID,theIDComment,theIDUsed, isDefFlag))], replacers[,(names(replacers) %in% c("thisID",colname,theIDComment,theIDUsed, isDefFlag))], by=colname)
+      repCurDef = merge(repCurDef[,!(names(repCurDef) %in% c(theID,theIDComment,theIDUsed, isDefFlag))], 
+                        replacers[,(names(replacers) %in% c("thisID","trackID",theIDComment,theIDUsed, isDefFlag))],  by="trackID")
       names(repCurDef)[names(repCurDef) == 'thisID'] <- theID
     }else{
       repCurDef <- repCurDef[0,]
     }
     
     if (nrow(doubleblind)>0){
-      dbCurDef = merge(dbCurDef[,!(names(dbCurDef) %in% c(theID,theIDUsed, isDefFlag))], doubleblind[,(names(doubleblind) %in% c("thisID",colname,theIDComment,theIDUsed, isDefFlag))], by=colname)
+      dbCurDef = merge(dbCurDef[,!(names(dbCurDef) %in% c(theID,theIDUsed, isDefFlag))], 
+                       doubleblind[,(names(doubleblind) %in% c("thisID","trackID",theIDComment,theIDUsed, isDefFlag))],by="trackID")
       commentx = paste0(theIDComment,".x")
       commenty = paste0(theIDComment,".y") 
       
@@ -413,55 +425,46 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     }
 
     newStuff<-rbind(newCurDef, repCurDef, dbCurDef)
-    #replace rows that we have new info for
-    curDefinitive=rbind(curDefinitive[!(curDefinitive[,colname] %in% newStuff[,colname]),],newStuff)
+    curDefinitive=rbind(curDefinitive[!(curDefinitive$trackID %in% newStuff$trackID),],newStuff)
     return(curDefinitive)
   }   
   checkAndCompareTSN<-function(definitive=definitive, df=NULL, searchtype = NULL){
-    if (searchtype =="scientific"){
-      searchtypeVal = "scientific name"
-      colname = "SPEC"
-    }else{
-      searchtypeVal = "common name"
-      colname = "COMM"
-    }
+    colname= ifelse(searchtype =="scientific","SPEC","COMM")
     print(paste("...Checking ritis using ",searchtype," names"))
     no_TSN = definitive[definitive$TSN_Definitive %in% c(NA, FALSE),]
     if (nrow(no_TSN)>0) {
-      no_TSN = as.data.frame(t(sapply_pb(no_TSN[,colname],chk_ritis, searchtype=searchtype)))
-      names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis")
+      info=within(no_TSN, x <- paste(get(colname),trackID,sep='$$$'))
+      no_TSN = as.data.frame(t(sapply_pb(info$x,chk_ritis, searchtype=searchtype)))
+      names(no_TSN) = c("SEARCHTERM","ID_ritis","MATCH_ritis","trackID")
       definitive = assignDefinitive(definitive,no_TSN, searchtype)
     }
     return(definitive)
   }
   
   checkAndCompareAphiaID<-function(definitive, df= NULL, searchtype = NULL){
-    if (searchtype =="scientific"){
-      colname = "SPEC"
-    }else{
-      colname = "COMM"
-    }
-
+    colname= ifelse(searchtype =="scientific","SPEC","COMM")
     no_aphiaID = df[!(df$AphiaID_Definitive %in% TRUE),]
-    
     if (nrow(no_aphiaID)>0) {
       print(paste0("...against taxize using ",searchtype," names"))
-      no_aphiaID = as.data.frame(t(sapply_pb(no_aphiaID[,colname],chk_taxize, searchtype=searchtype)))
+      info=within(no_aphiaID, x <- paste(get(colname),trackID,sep='$$$'))
+      no_aphiaID = as.data.frame(t(sapply_pb(info$x,chk_taxize, searchtype=searchtype)))
     }
     if (nrow(no_aphiaID)>0) {
       no_aphiaID = data.frame("SEARCHTERM" = toupper(unlist(no_aphiaID$SEARCHTERM)),
                               "ID_taxize" = unlist(no_aphiaID$ID_taxize),
-                              "MATCH_taxize" = unlist(no_aphiaID$MATCH_taxize))
-
+                              "MATCH_taxize" = unlist(no_aphiaID$MATCH_taxize),
+                              "trackID" = unlist(no_aphiaID$trackID))
       definitive = assignDefinitive(definitive,no_aphiaID, searchtype)
       not_definitive = definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
       if (nrow(not_definitive)>0){
         print(paste0("...against worrms using ",searchtype," names"))
-        not_definitive = as.data.frame(t(sapply_pb(not_definitive[,colname],chk_worrms, searchtype=searchtype)))
-        names(not_definitive)<-c("SEARCHTERM", "ID_worrms", "MATCH_worrms")
+        info=within(not_definitive, x <- paste(get(colname),trackID,sep='$$$'))
+        not_definitive = as.data.frame(t(sapply_pb(info$x,chk_worrms, searchtype=searchtype)))
+        names(not_definitive)<-c("SEARCHTERM", "ID_worrms", "MATCH_worrms", "trackID")
         not_definitive = data.frame("SEARCHTERM" = toupper(unlist(not_definitive$SEARCHTERM)),
                                     "ID_worrms" = unlist(not_definitive$ID_worrms),
-                                    "MATCH_worrms" = unlist(not_definitive$MATCH_worrms))
+                                    "MATCH_worrms" = unlist(not_definitive$MATCH_worrms),
+                                    "trackID" = unlist(not_definitive$trackID))
         definitive = assignDefinitive(definitive,not_definitive, searchtype)
       }
     }
@@ -469,14 +472,17 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   }  
   
   # Start of the actual processing ------------------------------------------
+
   print("Looking for AphiaIDs")
   definitive = checkAndCompareAphiaID(definitive, df = definitive,searchtype="scientific")
   missing = definitive[!(definitive$AphiaID_Definitive %in% TRUE),]
+
   multi_Codes = multiCheck(multi_Codes, definitive, "AphiaID")
   if (nrow(missing)>0){
     definitive = checkAndCompareAphiaID(definitive, df = missing,searchtype="common")
     multi_Codes = multiCheck(multi_Codes, definitive, "AphiaID")
   }
+definitive_postAphia<<-definitive  
   # #have lots of aphias - try to use them to get TSNs
   print("Looking for TSNs")
   print("...Checking worrms using AphiaIDs")
@@ -502,11 +508,15 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   definitive = as.data.frame(sapply(checkAndCompareTSN(definitive, df=definitive, searchtype="scientific"),unlist))
   missingTSN = definitive[!(definitive$TSN_Definitive %in% TRUE),]
   if (nrow(missingTSN)>0){
-    definitive = as.data.frame(sapply(checkAndCompareTSN(definitive, df=missingTSN, searchtype="common"),unlist))
+    info=within(missingTSN, x <- paste(COMM,trackID,sep='$$$'))
+    definitive = as.data.frame(sapply(checkAndCompareTSN(definitive, df=info, searchtype="common"),unlist))
   }
   multi_Codes = multiCheck(multi_Codes, definitive, "TSN")
   
+  definitive_postTSN<<-definitive  
   if (nrow(multi_Codes)>0){
+    
+    multi_Codes_postAll<-multi_Codes
     print("looking for the multimatch aphias")
     TSNsFromAphiasMulti = sapply_pb(multi_Codes$AphiaID,chk_worrmsTSN)
     TSNsFromAphiasMulti = data.frame("TSN" = unique(do.call("rbind", lapply(TSNsFromAphiasMulti, "[[", 1))))
@@ -518,9 +528,9 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
     if (nrow(multi_Codes[multi_Codes$AphiaID %in% TSNsFromAphiasMulti$AphiaID,])>0){
       multi_Codes[multi_Codes$AphiaID %in% TSNsFromAphiasMulti$AphiaID,c("TSN","TSN_src","TSN_data")] = merge(multi_Codes[multi_Codes$AphiaID %in% TSNsFromAphiasMulti$AphiaID,], TSNsFromAphiasMulti, by.x="AphiaID", by.y="AphiaID")[,c("TSN.y","TSN_src.y","TSN_data.y")]
     }
-  }
-  
     multi_Codes= multiCheck(multi_Codes, definitive,"TSN")
+  }
+
   if (nrow(multi_Codes)>0){
      cat("\nReview the contents of 'multi_Codes', as some matches were not definitive, and have alternates you should consider\n")
   }else{
@@ -531,7 +541,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   
   names(definitive)[names(definitive)=="SPEC"]<-sci_col
   names(definitive)[names(definitive)=="COMM"]<-comm_col
-  res = merge(spec_list[,!(colnames(spec_list) %in% c("TSN", "COMM", "SPEC"))], definitive, by="SPEC_ORIG")
+  res = merge(spec_list[,!(colnames(spec_list) %in% c("TSN", "COMM", "SPEC"))], definitive, by="trackID")
   res$SPEC<-NULL
   res$COMM<-NULL
   names(res)[names(res) == 'SPEC_ORIG'] <- 'SPEC'

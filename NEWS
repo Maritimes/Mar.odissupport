@@ -1,6 +1,9 @@
 Mar.odissupport 
 ==============
 Changes
+2018.03.06
+* getTaxaIDs() modified to remove reliance of Sci name as a key.
+
 2018.03.01
 * getTaxaIDs() first effort is completed.
 
