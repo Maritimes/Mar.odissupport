@@ -25,7 +25,7 @@ with slashes), we ensure that the results will be as clean as possible prior
 to searching. By default, the following values will be filtered:
 \itemize{
 \item \\(.*?\\) -removes thing in brackets (e.g "(NS)")
-\item *\\b[^'][[:alpha:]]{1,2}\\.?\\b* - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
+\item \\b[a-zA-Z]{1,2}\\. - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
 \item \\,\\s?(SMALL|LARGE) - removes instances like ",SMALL"
 \item UNIDENTIFIED - removes the word "UNIDENTIFIED"
 \item UNID\\. - removes the word "UNID."

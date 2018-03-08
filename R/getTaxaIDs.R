@@ -72,7 +72,6 @@
 #' @family qc
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 #' @export
-#' @note
 getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterStrings=NULL){
   filterStrings <- c(filterStrings,"\\(.*?\\)", "(\\b[a-zA-Z]{1,2}\\.)","\\,\\s?(SMALL|LARGE)","-?UNIDENTIFIED", "\\,?\\s?EGGS-?","-?UNID\\.","PURSE\\s")
   # Initial data preparation ------------------------------------------------
@@ -122,7 +121,7 @@ getTaxaIDs <- function(spec_list=NULL, sci_col=NULL, comm_col=NULL, filterString
   }
   
   multiCheck<-function(multi_Codes, definitive, theCode){
-if (nrow(multi_Codes)>0)browser()
+#if (nrow(multi_Codes)>0)browser()
     #update multi_codes to hold only those species for which we don't have a definitve value 
     theseMulti = multi_Codes[(multi_Codes$trackID %in% definitive[definitive[,theCode] %in% c(NA,FALSE),"trackID"]),]
     assign("multi_Codes", theseMulti, envir = .GlobalEnv)
@@ -137,6 +136,7 @@ if (nrow(multi_Codes)>0)browser()
     
     #use taxize functions to check stuff
     colname= ifelse(searchtype =="scientific","SPEC","COMM")
+    #if (searchterm=="MELINNIA ELIZABETHAE")browser()
     this <- tryCatch(
       {
         taxize::get_wormsid(query=searchterm, searchtype=searchtype, ask=ask, verbose=verbose, accepted = TRUE,rows = 1, messages =FALSE)
@@ -188,6 +188,8 @@ if (nrow(multi_Codes)>0)browser()
     colname= ifelse(searchtype =="scientific","SPEC","COMM")
     resName = "scientificname"
     if (searchtype == 'scientific'){
+      
+      
       thisi <- tryCatch(
         {
           worrms::wm_records_name(searchterm, fuzzy=T, marine_only = T)
@@ -245,22 +247,44 @@ if (nrow(multi_Codes)>0)browser()
   }
   
   chk_ritis <- function(info = NULL, searchtype='scientific', ask=FALSE, verbose=FALSE){
+
     info=strsplit(info,"\\$\\$\\$")
     searchterm=info[[1]][1]
     trackID=info[[1]][2]
     
-    this = resultFormat
+    #this = resultFormat
+    tracker <<- info
+    cat(paste0(info),"\n")
     if (searchtype == 'scientific'){
+     #if (searchterm == "A")browser()
       resName = "combinedName"
       colname = "SPEC"
-      thisi =  as.data.frame(ritis::search_scientific(searchterm, wt = "json", raw = FALSE))
+      
+      thisi <- tryCatch(
+        {
+          as.data.frame(ritis::search_scientific(searchterm, wt = "json", raw = FALSE))
+        },
+        error=function(cond){
+        }
+      )
+
     }else{
       resName = "commonName"
       colname = "COMM"
-      if (searchterm=="WHALES")browser()
-      thisi = as.data.frame(ritis::search_common(searchterm, wt = "json", raw = FALSE))
+      
+      thisi <- tryCatch(
+        {
+          as.data.frame(ritis::search_common(searchterm, wt = "json", raw = FALSE))
+        },
+        error=function(cond){
+        }
+      )
     }
-    if (nrow(thisi)==0) {
+    crapRec = data.frame("SEARCHTERM" = searchterm, "ID_ritis" = NA, "MATCH_ritis" = "not found","trackID"= trackID)
+    if (is.null(thisi)) {
+      thisi <- crapRec
+      cat(paste0(thisi, " would have failed\n"))
+    } else if (nrow(thisi)==0) {
       thisi=data.frame("SEARCHTERM" = searchterm, "ID_ritis" = NA, "MATCH_ritis" = "not found","trackID"= trackID)
     }else if (nrow(thisi)==1) {
       thisi = cbind("SEARCHTERM"= searchterm,"ID_ritis" = thisi$tsn, "MATCH_ritis" = "single match","trackID"= trackID)
@@ -366,34 +390,22 @@ if (nrow(multi_Codes)>0)browser()
     }
     results <-results[,c("SEARCHTERM","trackID", theID,theIDComment,theIDUsed, isDefFlag)]
     names(results)[names(results) == 'SEARCHTERM'] <- colname
-    
-    #multimatches = 
-    #did something get deleted here?!
- 
-    #just adding new stuff - we don't have anything yet
 
     newFind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(NA)),][c("trackID",theID)], 
                     results[results[,isDefFlag] %in% c(TRUE,FALSE),], by="trackID")
     newFind[,'thisID'] <- newFind[paste0(theID,".y")]
-     
-    #if the new codes are definitive, we will replace the existing (not-definitive) ones entirely 
-
     replacers = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c("trackID",theID)], 
                       results[results[,isDefFlag] %in% TRUE,], by="trackID")
     replacers[,'thisID'] <- replacers[paste0(theID,".y")]
-          
     #if we have already have a tentative code, and our new result set gives the same code,
     #we will call it definitive   
-
     doubleblind = merge(curDefinitive[(curDefinitive[,isDefFlag] %in% c(FALSE)),][c("trackID",theID)], 
                         results[results[,isDefFlag] %in% FALSE,], by="trackID")
     doubleblind[,'thisID'] <- doubleblind[paste0(theID,".y")]    
      
-    
     newCurDef<-curDefinitive
     repCurDef<-curDefinitive
     dbCurDef<-curDefinitive
-    
 
     if (nrow(newFind)>0){
       newCurDef = merge(newCurDef[,!(names(newCurDef) %in% c(theID,theIDComment,theIDUsed, isDefFlag))], 
@@ -504,6 +516,8 @@ definitive_postAphia<<-definitive
       }
     }
   }
+  definitive_postTSNAphia<<-definitive 
+  
   #try to find remaining TSNs using sci and comm names
   definitive = as.data.frame(sapply(checkAndCompareTSN(definitive, df=definitive, searchtype="scientific"),unlist))
   missingTSN = definitive[!(definitive$TSN_Definitive %in% TRUE),]
