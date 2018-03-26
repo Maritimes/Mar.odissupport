@@ -2,6 +2,7 @@
 
 export(getTaxaIDs)
 importFrom(jsonlite,fromJSON)
+importFrom(plyr,rbind.fill)
 importFrom(ritis,search_common)
 importFrom(ritis,search_scientific)
 importFrom(taxize,get_wormsid)

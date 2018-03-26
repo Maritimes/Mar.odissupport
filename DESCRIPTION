@@ -1,7 +1,7 @@
 Package: Mar.odissupport
 Type: Package
 Title: A Package Facilitating the Transfer of Data from PED to ODIS
-Version: 2018.03.08
+Version: 2018.03.26
 Authors@R: c( person("Mike", "McMahon", email="Mike.McMahon@dfo-mpo.gc.ca", role=c("aut", "cre")) )
 Maintainer: Mike McMahon <Mike.McMahon@dfo-mpo.gc.ca>
 Description: This package contains scripts for assisting with the standardization of data for further distribution by ODIS.
@@ -10,7 +10,8 @@ Imports:
   jsonlite,
   ritis,
   taxize,
-  Mar.utils
+  Mar.utils,
+  plyr
 Remotes:
   Maritimes/Mar.utils
 License: MIT + file LICENSE

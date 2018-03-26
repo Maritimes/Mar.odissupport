@@ -1,6 +1,12 @@
 Mar.odissupport 
 ==============
 Changes
+2018.03.28
+* skips searching services for NA values
+
+2018.03.07
+* modified ritis check to catch bad results
+
 2018.03.06
 * getTaxaIDs() modified to remove reliance of Sci name as a key.
 
