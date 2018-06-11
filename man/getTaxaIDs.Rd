@@ -5,7 +5,7 @@
 \title{getTaxaIDs}
 \usage{
 getTaxaIDs(spec_list = NULL, sci_col = NULL, comm_col = NULL,
-  filterStrings = NULL)
+  sci_Filts = NULL, comm_Filts = NULL, codes = c("APHIAID", "TSN"))
 }
 \arguments{
 \item{spec_list}{the dataframe containing information to be decoded to TSN and
@@ -17,20 +17,31 @@ scientific names}
 \item{comm_col}{the name of the column of the dataframe containing the
 common names}
 
-\item{filterStrings}{a vector of regex values that you might want to clean out
-of your scientific and common names prior to sending them to a web service.  
-For example, some Maritimes names inlude "(NS)", which will prevent services
-from finding matches, By adding "\\(NS\\)" (escaping the brackets and periods 
-with slashes), we ensure that the results will be as clean as possible prior 
-to searching. By default, the following values will be filtered:
+\item{sci_Filts}{default is \code{NULL} -  a vector of regex values that you 
+might want to filter out of your scientific names prior to sending them to a 
+web service.  For example, some Maritimes names inlude "(NS)", which will 
+prevent services from finding matches, By adding "\\(NS\\)" (escaping the 
+brackets and periods with slashes), we ensure that the results will be as 
+clean as possible prior to searching.}
+
+\item{comm_Filts}{default is \code{NULL} -  a vector of regex values that you 
+might want to filter out of your common names prior to sending them to a 
+web service.  
+By default, the following values will be filtered from both \code{sci_col} 
+and \code{comm_col}:
 \itemize{
 \item \\(.*?\\) -removes thing in brackets (e.g "(NS)")
-\item \\b[a-zA-Z]{1,2}\\. - removes one or two letter blocks of text (potentially followed by a period) (e.g "SP.")
+\item \\b[a-zA-Z]{1,2}\\. - removes one or two letter blocks of text 
+(potentially followed by a period) (e.g "SP.")
 \item \\,\\s?(SMALL|LARGE) - removes instances like ",SMALL"
 \item UNIDENTIFIED - removes the word "UNIDENTIFIED"
 \item UNID\\. - removes the word "UNID."
 \item EGGS - removes the word "EGSS"
+\item PURSE\\s" - removes the word "PURSE"
 }}
+
+\item{codes}{These are the codes you would like to determine.  \code{TSN} and
+\code{APHIAID} are the only valid entries.}
 }
 \description{
 This function attempts to determine a definitive AphiaID and TSN
@@ -52,28 +63,33 @@ in the following order:
 In addition to all of the original fields, the returned data
 will include: 
 \enumerate{
-  \item Aphiaid
-  \item Aphiaid_src - which service(s) provided the Aphiaid value
-  \item Aphiaid_data - which service(s) provided the Aphiaid value
-  \item Aphiaid_definitive* - indicates whether or not we are confident about 
-  AphiaID
+  \item APHIAID
+  \item APHIAID_SRC - what data was used to find the Aphiaid value (e.g. 
+  scientific name, common name)
+  \item APHIAID_SVC - which service(s) provided the Aphiaid value (e.g. 
+  taxize, ritis, worrms)
+  \item APHIAID_DEFINITIVE - TRUE indicates a single, confident match with a 
+  service, FALSE indicates that either several potential matches were found, 
+  or that the matches were recognized as authoritative by the service
+  \item APHIAID_SPELLING - alternative spellings suggested for the 
+  APHIAID_SRC suggested by the service that found the APHIAID
   \item TSN 
-  \item TSN_src - which service(s) provided the TSN value
-  \item TSN_data - which service(s) provided the TSN value
-  \item TSN_definitive* - indicates whether or not we are confident about 
-  TSN
+  \item TSN_SRC - what data was used to find the TSN value (e.g. 
+  scientific name, common name, APHIAID)
+  \item TSN_SVC - which service(s) provided the TSN value (e.g. 
+  taxize, ritis, worrms)
+  \item TSN_definitive - TRUE indicates a single, confident match with a 
+  service, FALSE indicates that either several potential matches were found, 
+  or that the matches were recognized as authoritative by the service
+  \item TSN_SPELLING - alternative spellings suggested for the 
+  TSN_SRC suggested by the service that found the TSN
   }
-Most webservices can return multiple IDs for a given search term, and the 
-results are often identified as "accepted" or not. For this function to 
-identify an ID as being definitive=TRUE, one of the following 3 situations 
-occurred: 
-\itemize{
-\item Only a single result was returned from a service
-\item Only a single item within a resultset was marked as "Accepted"
-\item Two independent services both returned the same ID (These may be 
-considered less definitive, and can be recognized by their <>_src fields 
-indication multiple sources - e.g. "Both worrms & ritis")
 }
+\seealso{
+Other speciesCodes: \code{\link{assignDefinitive}},
+  \code{\link{chk_ritis}}, \code{\link{chk_taxize}},
+  \code{\link{chk_worrmsTSN}}, \code{\link{chk_worrms}},
+  \code{\link{getAphiaIDs}}, \code{\link{getTSNs}}
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}

@@ -1,6 +1,11 @@
 Mar.odissupport 
 ==============
 Changes
+2018.06.11
+* major overhaul - should provide better results, but now returns a list of 2 items:
+   - results[[1]]: dataframe of species matched to the found codes;
+   - results[[2]]: dataframe of species for which multiple, valid records were found.
+
 2018.03.28
 * skips searching services for NA values
 
