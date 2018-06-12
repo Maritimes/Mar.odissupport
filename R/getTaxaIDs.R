@@ -80,28 +80,39 @@ getTaxaIDs <- function(spec_list = NULL,
                        codes = c("APHIAID", "TSN")) {
   #filters are the same, but might be handy to be able to remove things from
   #common names but not scientific, and vice versa
-  nrec0=nrow(spec_list)
   commFilts <- c(
     comm_Filts,
     "\\(.*?\\)",
     "(\\b[a-zA-Z]{1,2}\\.)",
     "\\,\\s?(SMALL|LARGE)",
-    "-?UNIDENTIFIED",
+    "-?,?UNIDENTIFIED",
     "\\,?\\s?EGGS-?",
     "-?UNID\\.",
     "PURSE\\s",
-    "\\s?LARVAE"
+    "\\s?LARVAE",
+    "\\sNS",
+    "\\sSP(P?)(\\.?)$",
+    "BAIT,\\s",
+    "^SAND$",
+    "^WATER$",
+    "^BAIT$"
   )
   sciFilts <- c(
     sci_Filts,
     "\\(.*?\\)",
     "(\\b[a-zA-Z]{1,2}\\.)",
     "\\,\\s?(SMALL|LARGE)",
-    "-?UNIDENTIFIED",
+    "-?,?UNIDENTIFIED",
     "\\,?\\s?EGGS-?",
     "-?UNID\\.",
     "PURSE\\s",
-    "\\s?LARVAE"
+    "\\s?LARVAE",
+    "\\sNS",
+    "\\sSP(P?)(\\.?)$",
+    "BAIT,\\s",
+    "^SAND$",
+    "^WATER$",
+    "^BAIT$"
   )
   spec_list$ID <- seq.int(nrow(spec_list))
   
@@ -111,14 +122,21 @@ getTaxaIDs <- function(spec_list = NULL,
   doComm = F
   
   if (!is.null(sci_col)) {
-    spec_list$SCI_COL_CLN   = trimws(gsub(paste(sciFilts, collapse = "|"),  " ", spec_list[, sci_col]))
+    spec_list$SCI_COL_CLN   = toupper(trimws(gsub(paste(sciFilts, collapse = "|"),  " ", spec_list[, sci_col],ignore.case = TRUE)))
     doSci = T
   } 
   if (!is.null(comm_col)) {
-    spec_list$COMM_COL_CLN = trimws(gsub(paste(commFilts, collapse = "|"),  " ", spec_list[, comm_col]))
+    spec_list$COMM_COL_CLN = toupper(trimws(gsub(paste(commFilts, collapse = "|"),  " ", spec_list[, comm_col],ignore.case = TRUE)))
     doComm = T
   } 
   definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
+  #remove rows we can never find results for
+  if (nrow(definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,])>0){
+    definitive = definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
+  }
+  definitive[nchar(definitive$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
+  definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
+  
   cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
   definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
   
@@ -245,8 +263,14 @@ getTaxaIDs <- function(spec_list = NULL,
   }else{
     multi_final="none"
   }
-  
-
+  if (class(multi_final) == 'data.frame'){
+    colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
+    multi_final = merge(spec_list, multi_final, by="ID", all.y = T)
+    multi_final$ID<-NULL
+    multi_final$SCI_COL_CLN<-NULL
+    multi_final$COMM_COL_CLN<-NULL
+  }
+    
   res = list(spec_list_final, multi_final)
   return(res)
 }

@@ -53,7 +53,16 @@ chk_ritis <- function(df = NULL,
         )
         rm(tmp)
         for (j in 1:nrow(this)){
-          this[j,"CODE_DEFINITIVE"]<-ifelse(data.frame(ritis::usage(this[j,"CODE"]))["taxonUsageRating"]=="valid",TRUE,FALSE)
+          thisDefCheck <- tryCatch({
+            data.frame(ritis::usage(this[j,"CODE"]))
+          },
+          error = function(cond) {
+          })
+          if(is.null(thisDefCheck)){
+            this[j,"CODE_DEFINITIVE"]<-FALSE
+          }else{
+            this[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
+          }
         }
         
         ##
@@ -101,7 +110,16 @@ chk_ritis <- function(df = NULL,
         )
         rm(tmp)
         for (j in 1:nrow(this)){
-          this[j,"CODE_DEFINITIVE"]<-ifelse(data.frame(ritis::usage(this[j,"CODE"]))["taxonUsageRating"]=="valid",TRUE,FALSE)
+          thisDefCheck <- tryCatch({
+            data.frame(ritis::usage(this[j,"CODE"]))
+          },
+          error = function(cond) {
+          })
+          if(is.null(thisDefCheck)){
+            this[j,"CODE_DEFINITIVE"]<-FALSE
+          }else{
+            this[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
+          }
         }
       }
       #if a code is definitive and matches existing spelling, keep it

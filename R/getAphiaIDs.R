@@ -15,7 +15,14 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
   print(paste0("::Taxize::"))
   if (doSci & (nrow(mysteryAPHIAID)>0))  {
     print(paste0("---scientific names---"))
-    sci =   chk_taxize(mysteryAPHIAID, "SCI_COL_CLN",searchtype = 'scientific')
+    
+    cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      sci = cln[[1]]
+    }else{
+      sci =   chk_taxize(cln[[1]], "SCI_COL_CLN",searchtype = 'scientific')
+    }
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -27,11 +34,24 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
+        rm(cln)
+      }
     }
   }
+  
   if (doComm & (nrow(mysteryAPHIAID)>0)) {
     print(paste0("---common names---"))
-    comm = chk_taxize(mysteryAPHIAID, "COMM_COL_CLN", searchtype = 'common')
+    
+    cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      comm = cln[[1]]
+    }else{
+      comm =   chk_taxize(cln[[1]], "COMM_COL_CLN",searchtype = 'common')
+    }
+
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -43,6 +63,10 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
+        rm(cln)
+      }
     }
   }
   
@@ -50,7 +74,15 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
   #worrms can generate multiple results/searchterm
   if (doSci  & (nrow(mysteryAPHIAID)>0))  {
     print(paste0("---scientific names---"))
-    sci =   chk_worrms(mysteryAPHIAID, "SCI_COL_CLN", searchtype = 'scientific')
+    
+    cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      sci = cln[[1]]
+    }else{
+      sci =   chk_worrms(cln[[1]], "SCI_COL_CLN", searchtype = 'scientific')
+    }
+    
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -62,11 +94,21 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
+        rm(cln)
+      }
     }
   }
   if (doComm & (nrow(mysteryAPHIAID)>0)) {
     print(paste0("---common names---"))
-    comm =   chk_worrms(mysteryAPHIAID, "COMM_COL_CLN", searchtype = 'common')
+    cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      comm = cln[[1]]
+    }else{
+      comm =   chk_worrms(cln[[1]], "COMM_COL_CLN", searchtype = 'common')
+    }
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -78,6 +120,10 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
+        rm(cln)
+      }
     }
   }
   res = list(definitiveAPHIAID, mysteryAPHIAID)

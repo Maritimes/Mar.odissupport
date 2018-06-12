@@ -16,6 +16,7 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
   if (!is.null(knownAphias))  {
     print(paste0("::worrms::"))
     print(paste0("---Existing AphiaIDs---"))
+    
     aphiaTSNRes =   chk_worrmsTSN(knownAphias)
     defCheck = assignDefinitive(df = aphiaTSNRes, masterList = masterList)
     newdefinitive= defCheck[[1]]
@@ -33,7 +34,14 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
   if (doSci  & (nrow(mysteryTSN)>0))  {
     print(paste0("::ritis::"))
     print(paste0("---scientific names---"))
-    sci = chk_ritis(mysteryTSN, "SCI_COL_CLN", searchtype = 'scientific')
+    
+    cln = skipUselessRecs(mysteryTSN, "SCI_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      sci = cln[[1]]
+    }else{
+      sci =   chk_ritis(cln[[1]], "SCI_COL_CLN",searchtype = 'scientific')
+    }
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -45,11 +53,22 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryTSN = rbind(mysteryTSN,cln[[2]])
+        rm(cln)
+      }
     }
   }
   if (doComm  & (nrow(mysteryTSN)>0))  {
     print(paste0("---common names---"))
-    comm = chk_ritis(mysteryTSN, "COMM_COL_CLN", searchtype = 'common')
+    cln = skipUselessRecs(mysteryTSN, "COMM_COL_CLN")
+    if (nrow(cln[[1]])<1){
+      print("No valid values to check - skipping check")
+      comm = cln[[1]]
+    }else{
+      comm =   chk_ritis(cln[[1]], "COMM_COL_CLN",searchtype = 'common')
+    }
+
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -61,6 +80,10 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
       }
       rm(defCheck)
       rm(newdefinitive)
+      if (nrow(cln[[2]])>0){
+        mysteryTSN = rbind(mysteryTSN,cln[[2]])
+        rm(cln)
+      }
     }
   }
   res = list(definitiveTSN, mysteryTSN)
