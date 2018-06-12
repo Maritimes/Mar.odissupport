@@ -89,7 +89,8 @@ will include:
 Other speciesCodes: \code{\link{assignDefinitive}},
   \code{\link{chk_ritis}}, \code{\link{chk_taxize}},
   \code{\link{chk_worrmsTSN}}, \code{\link{chk_worrms}},
-  \code{\link{getAphiaIDs}}, \code{\link{getTSNs}}
+  \code{\link{getAphiaIDs}}, \code{\link{getTSNs}},
+  \code{\link{skipUselessRecs}}
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}
