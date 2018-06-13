@@ -10,6 +10,8 @@
 #' @importFrom ritis search_scientific
 #' @importFrom ritis usage
 #' @importFrom ritis search_common
+#' @importFrom utils winProgressBar
+#' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_ritis <- function(df = NULL,

@@ -3,6 +3,8 @@
 #' corresponding TSN
 #' @param df - df of species for which we already have an APHIAID
 #' @importFrom worrms wm_external
+#' @importFrom utils winProgressBar
+#' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_worrmsTSN<-function(df = NULL){

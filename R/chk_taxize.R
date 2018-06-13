@@ -8,6 +8,8 @@
 #' @param searchtype - flag indicating whether scientific or common names should 
 #' be used checking the services
 #' @importFrom taxize get_wormsid
+#' @importFrom utils winProgressBar
+#' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_taxize <- function(df = NULL,

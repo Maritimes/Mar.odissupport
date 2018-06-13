@@ -9,6 +9,8 @@
 #' be used checking the services
 #' @importFrom worrms wm_records_name
 #' @importFrom worrms wm_records_common
+#' @importFrom utils winProgressBar
+#' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_worrms <- function(df = NULL,
