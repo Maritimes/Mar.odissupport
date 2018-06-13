@@ -19,8 +19,7 @@ chk_taxize <- function(df = NULL,
   pb <- winProgressBar(title = paste0("APHIAID>TAXIZE: via ", searchtype," names"), label=df[,field][1], min = 0, max = total, width = 300)
     results=df[0,]
     for (i in 1:total) {
-      setWinProgressBar(pb, i, title = NULL, label = #paste( round(i/total*100, 0),"% done")
-                          paste0(df[,field][i]," (", total-i," left)"))
+      setWinProgressBar(pb, i, title = NULL, label = paste0(df[,field][i]," (", total-i," left)"))
       this <- tryCatch({
         taxize::get_wormsid(
           query = df[,field][i],

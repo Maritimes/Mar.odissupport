@@ -83,36 +83,18 @@ getTaxaIDs <- function(spec_list = NULL,
   commFilts <- c(
     comm_Filts,
     "\\(.*?\\)",
-    "(\\b[a-zA-Z]{1,2}\\.)",
     "\\,\\s?(SMALL|LARGE)",
-    "-?,?UNIDENTIFIED",
     "\\,?\\s?EGGS-?",
-    "-?UNID\\.",
-    "PURSE\\s",
     "\\s?LARVAE",
-    "\\sNS",
-    "\\sSP(P?)(\\.?)$",
-    "BAIT,\\s",
-    "^SAND$",
-    "^WATER$",
-    "^BAIT$"
+    "\\sNS"
   )
   sciFilts <- c(
     sci_Filts,
     "\\(.*?\\)",
     "(\\b[a-zA-Z]{1,2}\\.)",
-    "\\,\\s?(SMALL|LARGE)",
-    "-?,?UNIDENTIFIED",
-    "\\,?\\s?EGGS-?",
-    "-?UNID\\.",
-    "PURSE\\s",
+    "\\,?\\s?EGG(S?)-?",
     "\\s?LARVAE",
-    "\\sNS",
-    "\\sSP(P?)(\\.?)$",
-    "BAIT,\\s",
-    "^SAND$",
-    "^WATER$",
-    "^BAIT$"
+    "\\sNS"
   )
   spec_list$ID <- seq.int(nrow(spec_list))
   
@@ -123,12 +105,71 @@ getTaxaIDs <- function(spec_list = NULL,
   
   if (!is.null(sci_col)) {
     spec_list$SCI_COL_CLN   = toupper(trimws(gsub(paste(sciFilts, collapse = "|"),  " ", spec_list[, sci_col],ignore.case = TRUE)))
+    spec_list[nchar(spec_list$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
+    
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"],
+           pattern = "([^']\\b[SP]{1,3}\\.?$)",replacement = "") 
+    
+   # spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[a-zA-Z]{1,2}\\.?$)"),"SCI_COL_CLN"]
+    
+    spec_list[grepl(x= spec_list$SCI_COL_CLN,ignore.case = T,pattern = "BAIT"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "PURSE"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "WHALE"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "CETACEAN"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "/"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "RESERVED"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "INVERTEBRATE"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "CRAB"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "LOBSTER"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SHRIMP"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "WATER"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "FLUID"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "^SAND"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "INORGANIC DEBRIS"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "IRISH MOSS"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "MIXED"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "MUCUS"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "FISH$"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SHARK"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "OPERCULUM"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "REMAINS"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "COD WORM"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SEA CORALS"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\bAND\\b"),"SCI_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = ","),"SCI_COL_CLN"]<-NA
+    
+    spec_list[which(spec_list$SCI_COL_CLN==""),"SCI_COL_CLN"]<-NA
     doSci = T
   } 
   if (!is.null(comm_col)) {
     spec_list$COMM_COL_CLN = toupper(trimws(gsub(paste(commFilts, collapse = "|"),  " ", spec_list[, comm_col],ignore.case = TRUE)))
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "BAIT"),"COMM_COL_CLN"]<-NA
+    
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "REMAINS"),"COMM_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "REMAINS"),"COMM_COL_CLN"],
+           pattern = "REMAINS",replacement = "") 
+    
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "DIGESTED"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED PER"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED SPECIES"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "([^']\\b[a-zA-Z]{1,2}\\.?$)"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "SURVEY"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "RESERVED"),"COMM_COL_CLN"]<-NA
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"]<-
+       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"],
+            pattern = "(-|,|\\s)?UNIDENTIFIED.*",replacement = "") 
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"]<-
+       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
+            pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
+    spec_list[which(spec_list$COMM_COL_CLN==spec_list$SCI_COL_CLN & !is.na(spec_list$SCI_COL_CLN)),"COMM_COL_CLN"]<-NA
+    spec_list[which(spec_list$COMM_COL_CLN==""),"COMM_COL_CLN"]<-NA
+    browser()
     doComm = T
   } 
+  View(spec_list)
+  browser()
   definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
   #remove rows we can never find results for
   if (nrow(definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,])>0){
@@ -181,6 +222,7 @@ getTaxaIDs <- function(spec_list = NULL,
   if("TSN" %in% codes){
     if ("APHIAID" %in% codes) {
       knownAphias <- theAphiaIDs[[1]][!is.na(theAphiaIDs[[1]]$CODE),]
+      if (nrow(knownAphias)<1)knownAphias <-NULL
     }else{
       knownAphias <-NULL
     }
@@ -203,6 +245,32 @@ getTaxaIDs <- function(spec_list = NULL,
     tsn_mystery = theTSNs[[2]][is.na(theTSNs[[2]]$CODE),]
     if (nrow(tsn_mystery)>0) 
       tsn_mystery[,c("CODE_SVC","CODE_TYPE","CODE_SRC","SUGG_SPELLING")]<-NA
+  }
+  
+  if ("TSN" %in% codes & "APHIAID" %in% codes ){
+    dblCheck = rbind(aphia_uncertain,aphia_mystery)
+    if(nrow(dblCheck)>0){
+      dblCheck = dblCheck[dblCheck$ID %in% tsn_known[!is.na(tsn_known$SUGG_SPELLING) ,"ID"],]
+      if(nrow(dblCheck)>0){
+        correctors = tsn_known[tsn_known$ID %in% dblCheck$ID,c("ID","SUGG_SPELLING")]
+        if (nrow(correctors)>0){
+          correctors$SCI_COL_CLN<-correctors$COMM_COL_CLN<-correctors$SUGG_SPELLING
+          correctors$SUGG_SPELLING<-NULL
+          browser()
+          dblCheckTAXSCI =   chk_taxize(correctors, "SCI_COL_CLN",searchtype = 'scientific')
+          dblCheckTAXCOMM =   chk_taxize(correctors, "COMM_COL_CLN",searchtype = 'common')
+          dblCheckWORRMSSCI =   chk_worrms(correctors, "SCI_COL_CLN",searchtype = 'scientific')
+          dblCheckWORRMSCOMM =   chk_worrms(correctors, "COMM_COL_CLN",searchtype = 'common')
+          newres = rbind(dblCheckTAXSCI,dblCheckTAXCOMM,dblCheckWORRMSSCI,dblCheckWORRMSCOMM) 
+          newres=newres[newres$CODE_DEFINITIVE %in% TRUE,]
+          check = unique(newres[c("ID", "CODE")])
+          browser()
+          aphia_mystery = aphia_mystery[!(aphia_mystery$ID %in% newres$ID),]
+          aphia_known = rbind(aphia_known,newres)
+        }
+      }
+    }
+    
   }
   
   #join results back to original data
@@ -250,6 +318,7 @@ getTaxaIDs <- function(spec_list = NULL,
       spec_list_final[(spec_list_final$ID %in% tsn_multi$ID), "TSN_MULTI_FLAG"] <-TRUE
     }
   }
+  
   
   spec_list_final$ID<-NULL
   spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
