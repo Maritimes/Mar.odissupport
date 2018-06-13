@@ -6,13 +6,17 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_worrmsTSN<-function(df = NULL){
+ total <- nrow(df)
+  pb <- winProgressBar(title = paste0("TSN>WORRMS: via determined APHIAIDs"), label=df[1,"SCI_COL_CLN"], min = 0, max = total, width = 300)
   results=df[0,]
   names(df)[names(df)=="CODE"]= "AphiaID"
   names(df)[names(df)=="CODE_DEFINITIVE"]= "AphiaID_DEF"
   
   #added loop since one record with no results botched the whole call;
   #likely a huge performance hit
-  for (i in 1:nrow(df)) {
+  for (i in 1:total) {
+      setWinProgressBar(pb, i, title = NULL, label = #paste( round(i/total*100, 0),"% done")
+                          paste0(df[i,"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
         worrms::wm_external(id = as.integer(df[df$CODE_TYPE == "APHIAID","AphiaID"][i]))
@@ -54,5 +58,6 @@ chk_worrmsTSN<-function(df = NULL){
     this = merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")],this, by="ID", all.y=TRUE)
     results = rbind(results,this)
   }
+  close(pb)
   return(results)
 }

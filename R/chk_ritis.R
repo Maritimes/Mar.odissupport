@@ -15,10 +15,15 @@
 chk_ritis <- function(df = NULL,
                        field = NULL,
                        searchtype = NULL) {
+  total <- nrow(df)
+  pb <- winProgressBar(title = paste0("TSN>RITIS: via ", searchtype," names"), label=df[,field][1], min = 0, max = total, width = 300)
   results=df[0,]
   
+  for (i in 1:total) {
+    setWinProgressBar(pb, i, title = NULL, label = #paste( round(i/total*100, 0),"% done")
+                        paste0(df[,field][i]," (", total-i," left)"))
+    
   if (searchtype == 'scientific') {
-    for (i in 1:nrow(df)) {
       this <- tryCatch({
         as.data.frame(ritis::search_scientific(df[,field][i], wt = "json", raw = FALSE))
       },
@@ -76,12 +81,8 @@ chk_ritis <- function(df = NULL,
       this=merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")], this, by="ID", all.y = T) 
       results = rbind(results,this)
       rm(this)
-    }
-    
-
   }
   if (searchtype == 'common'){   
-    for (i in 1:nrow(df)) {
       this <- tryCatch({
         as.data.frame(ritis::search_common(df[,field][i], wt = "json", raw = FALSE))
       },
@@ -131,7 +132,8 @@ chk_ritis <- function(df = NULL,
       this=merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")], this, by="ID", all.y = T)
       results = rbind(results,this)
       rm(this)
-    }
   }
+  }
+  close(pb)
   return(results)
 }

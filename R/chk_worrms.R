@@ -14,8 +14,12 @@
 chk_worrms <- function(df = NULL,
            field = NULL,
            searchtype = NULL) {
+    total <- nrow(df)
+    pb <- winProgressBar(title = paste0("APHIAID>WORRMS: via ", searchtype," names"), label=df[,field][1], min = 0, max = total, width = 300)
     results=df[0,]
-    for (i in 1:nrow(df)) {
+    for (i in 1:total) {
+      setWinProgressBar(pb, i, title = NULL, label = #paste( round(i/total*100, 0),"% done")
+                          paste0(df[,field][i]," (", total-i," left)"))
       if (searchtype == 'scientific') {
         this <- tryCatch({
           worrms::wm_records_name(df[,field][i], fuzzy = F, marine_only = T)
@@ -58,5 +62,6 @@ chk_worrms <- function(df = NULL,
       this = merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")],this, by="ID", all.y=TRUE)
       results = rbind(results,this)
     }
+    close(pb)
     return(results)
   }

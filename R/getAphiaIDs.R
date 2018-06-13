@@ -11,11 +11,7 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NULL){
-  print("Finding AphiaIDs")
-  print(paste0("::Taxize::"))
   if (doSci & (nrow(mysteryAPHIAID)>0))  {
-    print(paste0("---scientific names---"))
-    
     cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")
@@ -40,10 +36,7 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
     }
   }
-  
   if (doComm & (nrow(mysteryAPHIAID)>0)) {
-    print(paste0("---common names---"))
-    
     cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")
@@ -69,12 +62,7 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
     }
   }
-  
-  print(paste0("::worrms::"))
-  #worrms can generate multiple results/searchterm
   if (doSci  & (nrow(mysteryAPHIAID)>0))  {
-    print(paste0("---scientific names---"))
-    
     cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")
@@ -82,7 +70,6 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
     }else{
       sci =   chk_worrms(cln[[1]], "SCI_COL_CLN", searchtype = 'scientific')
     }
-    
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -101,7 +88,6 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
     }
   }
   if (doComm & (nrow(mysteryAPHIAID)>0)) {
-    print(paste0("---common names---"))
     cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")

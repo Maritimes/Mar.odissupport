@@ -12,11 +12,7 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, masterList = NULL){
-  print("Finding TSNs")
   if (!is.null(knownAphias))  {
-    print(paste0("::worrms::"))
-    print(paste0("---Existing AphiaIDs---"))
-    
     aphiaTSNRes =   chk_worrmsTSN(knownAphias)
     defCheck = assignDefinitive(df = aphiaTSNRes, masterList = masterList)
     newdefinitive= defCheck[[1]]
@@ -32,9 +28,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
   }
   
   if (doSci  & (nrow(mysteryTSN)>0))  {
-    print(paste0("::ritis::"))
-    print(paste0("---scientific names---"))
-    
     cln = skipUselessRecs(mysteryTSN, "SCI_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")
@@ -60,7 +53,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
     }
   }
   if (doComm  & (nrow(mysteryTSN)>0))  {
-    print(paste0("---common names---"))
     cln = skipUselessRecs(mysteryTSN, "COMM_COL_CLN")
     if (nrow(cln[[1]])<1){
       print("No valid values to check - skipping check")
