@@ -80,22 +80,21 @@ getTaxaIDs <- function(spec_list = NULL,
                        codes = c("APHIAID", "TSN")) {
   #filters are the same, but might be handy to be able to remove things from
   #common names but not scientific, and vice versa
-  commFilts <- c(
-    comm_Filts,
-    "\\(.*?\\)",
-    "\\,\\s?(SMALL|LARGE)",
-    "\\,?\\s?EGGS-?",
-    "\\s?LARVAE",
-    "\\sNS"
-  )
-  sciFilts <- c(
-    sci_Filts,
-    "\\(.*?\\)",
-    "(\\b[a-zA-Z]{1,2}\\.)",
-    "\\,?\\s?EGG(S?)-?",
-    "\\s?LARVAE",
-    "\\sNS"
-  )
+  allFilts <- c("BAIT", "DIGESTED","UNIDENTIFIED PER","UNIDENTIFIED SPECIES",
+                "REMAINS","SURVEY","FSRS -","RESERVED","PURSE",
+                "^FISH( AND| \\,|$)","\\,?\\s?EGG(S?)-?","\\s?LARVAE",
+                "INVERTEBRATE","WATER","FLUID","^SAND$",
+                "INORGANIC DEBRIS","MIXED","MUCUS","OPERCULUM")
+  
+  commFilts <- c(comm_Filts,"([^']\\b[SP]{1,3}\\.?$)",
+                 "([^']\\b[a-zA-Z]{1,2}\\.?$)")
+  
+  sciFilts <- c(sci_Filts, "WHALE","CETACEAN","/","CRAB", "LOBSTER","SHRIMP",
+                "IRISH MOSS","SHARK","COD WORM","SEA CORALS","SKATE","OBSOLETE",
+                "FINFISHES","GROUNDFISH","PELAGIC FISH","\\bAND\\b","SAND TUBE",
+                "UNIDENTIFIED",",")
+  
+  #SAND
   spec_list$ID <- seq.int(nrow(spec_list))
   
   spec_list$SCI_COL_CLN = NA
@@ -104,80 +103,61 @@ getTaxaIDs <- function(spec_list = NULL,
   doComm = F
   
   if (!is.null(sci_col)) {
-    spec_list$SCI_COL_CLN   = toupper(trimws(gsub(paste(sciFilts, collapse = "|"),  " ", spec_list[, sci_col],ignore.case = TRUE)))
-    spec_list[nchar(spec_list$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
+    #remove whitespace
+    spec_list$SCI_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list[, sci_col]))
+    #remove recs matching allFilts and sci_filts
+    spec_list[grepl(x=spec_list[, sci_col],ignore.case = TRUE, pattern = paste(c(allFilts, sciFilts), collapse = "|")),"SCI_COL_CLN"]<-NA
     
+    #remove bad bits, but retain the rest of the string)
+    #(NS) or NS
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"],
+           pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
+    #SP, SP., SPP and SPP.
     spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"]<-
       gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"],
            pattern = "([^']\\b[SP]{1,3}\\.?$)",replacement = "") 
     
-   # spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[a-zA-Z]{1,2}\\.?$)"),"SCI_COL_CLN"]
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\b[a-zA-Z]{1,2}\\."),"SCI_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\b[a-zA-Z]{1,2}\\."),"SCI_COL_CLN"],
+           pattern = "\\b[a-zA-Z]{1,2}\\.",replacement = "") 
     
-    spec_list[grepl(x= spec_list$SCI_COL_CLN,ignore.case = T,pattern = "BAIT"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "PURSE"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "WHALE"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "CETACEAN"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "/"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "RESERVED"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "INVERTEBRATE"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "CRAB"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "LOBSTER"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SHRIMP"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "WATER"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "FLUID"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "^SAND"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "INORGANIC DEBRIS"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "IRISH MOSS"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "MIXED"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "MUCUS"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "FISH$"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SHARK"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "OPERCULUM"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "REMAINS"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "COD WORM"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "SEA CORALS"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\bAND\\b"),"SCI_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = ","),"SCI_COL_CLN"]<-NA
-    
-    spec_list[which(spec_list$SCI_COL_CLN==""),"SCI_COL_CLN"]<-NA
+    #final remove whitespace and drop really short records
+    spec_list[,"SCI_COL_CLN"]<-  gsub("(^\\s+)|(\\s+$)", "", spec_list$SCI_COL_CLN)
+    spec_list[which(nchar(spec_list$SCI_COL_CLN)<4),"SCI_COL_CLN"]<-NA
     doSci = T
   } 
   if (!is.null(comm_col)) {
-    spec_list$COMM_COL_CLN = toupper(trimws(gsub(paste(commFilts, collapse = "|"),  " ", spec_list[, comm_col],ignore.case = TRUE)))
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "BAIT"),"COMM_COL_CLN"]<-NA
+    #remove whitespace
+    spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list[, comm_col]))
+    #remove recs matching allFilts and sci_filts
+    spec_list[grepl(x=spec_list[, comm_col],ignore.case = TRUE, pattern = paste(c(allFilts, commFilts), collapse = "|")),"COMM_COL_CLN"]<-NA
     
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "REMAINS"),"COMM_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "REMAINS"),"COMM_COL_CLN"],
-           pattern = "REMAINS",replacement = "") 
-    
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "DIGESTED"),"COMM_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED PER"),"COMM_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "UNIDENTIFIED SPECIES"),"COMM_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "([^']\\b[a-zA-Z]{1,2}\\.?$)"),"COMM_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "SURVEY"),"COMM_COL_CLN"]<-NA
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "RESERVED"),"COMM_COL_CLN"]<-NA
+    #remove bad bits, but retain the rest of the string)
     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"]<-
-       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"],
-            pattern = "(-|,|\\s)?UNIDENTIFIED.*",replacement = "") 
+      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"],
+           pattern = "(-|,|\\s)?UNIDENTIFIED.*",replacement = "") 
     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"]<-
-       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
-            pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
-    spec_list[which(spec_list$COMM_COL_CLN==spec_list$SCI_COL_CLN & !is.na(spec_list$SCI_COL_CLN)),"COMM_COL_CLN"]<-NA
-    spec_list[which(spec_list$COMM_COL_CLN==""),"COMM_COL_CLN"]<-NA
-    browser()
+      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
+           pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
+    #(NS) or NS
+    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"],
+           pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
+    
+    #final remove whitespace and drop really short records
+    spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list$COMM_COL_CLN))
+    spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
     doComm = T
   } 
-  View(spec_list)
-  browser()
   definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
   #remove rows we can never find results for
-  if (nrow(definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,])>0){
-    definitive = definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
-  }
-  definitive[nchar(definitive$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
-  definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
-  
+  # if (nrow(definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,])>0){
+  #   definitive = definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
+  # }
+  # definitive[nchar(definitive$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
+  # definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
+  # 
   cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
   definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
   
@@ -275,7 +255,7 @@ getTaxaIDs <- function(spec_list = NULL,
   
   #join results back to original data
   spec_list$SCI_COL_CLN<-NULL
-  spec_list$COMM_COL_CLN<-NULL
+  #spec_list$COMM_COL_CLN<-NULL
   
   spec_list_final = spec_list
   spec_list_final$APHIAID_MULTI_FLAG <-FALSE
@@ -312,7 +292,6 @@ getTaxaIDs <- function(spec_list = NULL,
     colnames(tsns) <- sub("CODE", "TSN", colnames(tsns))
     
     if (exists("tsn_multi")) tsns = tsns[!(tsns$ID %in% tsn_multi$ID),]
-    
     spec_list_final = merge(spec_list_final, tsns, by="ID", all.x = T)
     if (exists("tsn_multi")) {
       spec_list_final[(spec_list_final$ID %in% tsn_multi$ID), "TSN_MULTI_FLAG"] <-TRUE
@@ -337,7 +316,7 @@ getTaxaIDs <- function(spec_list = NULL,
     multi_final = merge(spec_list, multi_final, by="ID", all.y = T)
     multi_final$ID<-NULL
     multi_final$SCI_COL_CLN<-NULL
-    multi_final$COMM_COL_CLN<-NULL
+    #multi_final$COMM_COL_CLN<-NULL
   }
     
   res = list(spec_list_final, multi_final)

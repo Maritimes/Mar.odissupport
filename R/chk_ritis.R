@@ -23,7 +23,6 @@ chk_ritis <- function(df = NULL,
   
   for (i in 1:total) {
     setWinProgressBar(pb, i, title = NULL, label = paste0(df[,field][i]," (", total-i," left)"))
-    browser()
   if (searchtype == 'scientific') {
       this <- tryCatch({
         as.data.frame(ritis::search_scientific(df[,field][i], wt = "json", raw = FALSE))

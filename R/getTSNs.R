@@ -27,7 +27,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
     rm(defCheck)
     rm(newdefinitive)
   }
-  browser()
   if (doSci  & (nrow(mysteryTSN)>0))  {
     cln = skipUselessRecs(mysteryTSN, "SCI_COL_CLN")
     if (nrow(cln[[1]])<1){
@@ -37,7 +36,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
       sci =   chk_ritis(cln[[1]], "SCI_COL_CLN",searchtype = 'scientific')
     }
     if (nrow(sci)>0) {
-      browser()
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
       mysteryTSN= defCheck[[2]]
@@ -64,8 +62,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
     }
 
     if (nrow(comm)>0) {
-      
-      browser()
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
       mysteryTSN= defCheck[[2]]
