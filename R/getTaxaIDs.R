@@ -81,13 +81,13 @@ getTaxaIDs <- function(spec_list = NULL,
   #filters are the same, but might be handy to be able to remove things from
   #common names but not scientific, and vice versa
   allFilts <- c("BAIT", "DIGESTED","UNIDENTIFIED PER","UNIDENTIFIED SPECIES",
-                "REMAINS","SURVEY","FSRS -","RESERVED","PURSE",
-                "^FISH( AND| \\,|$)","\\,?\\s?EGG(S?)-?","\\s?LARVAE",
-                "INVERTEBRATE","WATER","FLUID","^SAND$",
+                "UNID (FISH|REMAINS)+", "REMAINS","SURVEY","FSRS -","RESERVED",
+                "PURSE","^FISH( AND| \\,|$)","\\,?\\s?EGG(S?)-?","\\s?LARVAE",
+                "INVERTEBRATE","WATER","FLUID","^SAND$","EGGS",
                 "INORGANIC DEBRIS","MIXED","MUCUS","OPERCULUM","^SHARK$")
   
   commFilts <- c(comm_Filts,"([^']\\b[SP]{1,3}\\.?$)",
-                 "([^']\\b[a-zA-Z]{1,2}\\.?$)","SHARK ")
+                 "([^']\\b[a-zA-Z]{1,2}\\.?$)","SHARK ","^FISH$","/")
   
   sciFilts <- c(sci_Filts, "WHALE","CETACEAN","/","CRAB", "LOBSTER","SHRIMP",
                 "IRISH MOSS","SHARK","COD WORM","SEA CORALS","SKATE","OBSOLETE",
@@ -135,13 +135,16 @@ getTaxaIDs <- function(spec_list = NULL,
     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"]<-
       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"],
            pattern = "(-|,|\\s)?UNIDENTIFIED.*",replacement = "") 
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
-           pattern = "(-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
+     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"]<-
+       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
+            pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
     #(NS) or NS
     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"]<-
       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"],
            pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
+    
+    #stupid "FISH" record
+    spec_list[grepl(x = spec_list[,comm_col],ignore.case = T,pattern = "UNID\\. FISH"),"COMM_COL_CLN"]<-NA
     #final remove whitespace and drop really short records
     spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list$COMM_COL_CLN))
     spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
