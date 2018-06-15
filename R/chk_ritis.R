@@ -69,8 +69,6 @@ chk_ritis <- function(df = NULL,
             this[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
           }
         }
-        
-        ##
       }
       #if a code is definitive and matches existing spelling, keep it
       if (nrow(this[toupper(this$SUGG_SPELLING) == toupper(df[i,"SCI_COL_CLN"]) & this$CODE_DEFINITIVE == T,])>0){
@@ -127,7 +125,6 @@ chk_ritis <- function(df = NULL,
       if (nrow(this[toupper(this$SUGG_SPELLING) == toupper(df[i,"COMM_COL_CLN"]) & this$CODE_DEFINITIVE == T,])>0){
         this = this[toupper(this$SUGG_SPELLING) == toupper(df[i,"COMM_COL_CLN"]),]
       } else{
-        # print("Common name doesn't match any valid TSNs perfectly.")
       }
       this=merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")], this, by="ID", all.y = T)
       results = rbind(results,this)

@@ -1,6 +1,11 @@
 Mar.odissupport 
 ==============
 Changes
+2018.06.15
+* realized some tsn searches return likely spelling alternatives when a match is
+  found.  Now captures these spellings and tries them against the aphia services
+* filtering was majorly reworked, since a huge number of common names were 
+  actually scientific
 2018.06.11
 * major overhaul - should provide better results, but now returns a list of 2 items:
    - results[[1]]: dataframe of species matched to the found codes;

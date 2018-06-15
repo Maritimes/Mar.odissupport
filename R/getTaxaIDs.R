@@ -84,17 +84,15 @@ getTaxaIDs <- function(spec_list = NULL,
                 "REMAINS","SURVEY","FSRS -","RESERVED","PURSE",
                 "^FISH( AND| \\,|$)","\\,?\\s?EGG(S?)-?","\\s?LARVAE",
                 "INVERTEBRATE","WATER","FLUID","^SAND$",
-                "INORGANIC DEBRIS","MIXED","MUCUS","OPERCULUM")
+                "INORGANIC DEBRIS","MIXED","MUCUS","OPERCULUM","^SHARK$")
   
   commFilts <- c(comm_Filts,"([^']\\b[SP]{1,3}\\.?$)",
-                 "([^']\\b[a-zA-Z]{1,2}\\.?$)")
+                 "([^']\\b[a-zA-Z]{1,2}\\.?$)","SHARK ")
   
   sciFilts <- c(sci_Filts, "WHALE","CETACEAN","/","CRAB", "LOBSTER","SHRIMP",
                 "IRISH MOSS","SHARK","COD WORM","SEA CORALS","SKATE","OBSOLETE",
                 "FINFISHES","GROUNDFISH","PELAGIC FISH","\\bAND\\b","SAND TUBE",
                 "UNIDENTIFIED",",")
-  
-  #SAND
   spec_list$ID <- seq.int(nrow(spec_list))
   
   spec_list$SCI_COL_CLN = NA
@@ -144,20 +142,12 @@ getTaxaIDs <- function(spec_list = NULL,
     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"]<-
       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"],
            pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
-    
     #final remove whitespace and drop really short records
     spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list$COMM_COL_CLN))
     spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
     doComm = T
   } 
   definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
-  #remove rows we can never find results for
-  # if (nrow(definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,])>0){
-  #   definitive = definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
-  # }
-  # definitive[nchar(definitive$SCI_COL_CLN)<4,"SCI_COL_CLN"]<-NA
-  # definitive[!(definitive$SCI_COL_CLN == "RESERVED") & !(definitive$COMM_COL_CLN == "RESERVED") ,]
-  # 
   cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
   definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
   
@@ -228,25 +218,37 @@ getTaxaIDs <- function(spec_list = NULL,
   }
   
   if ("TSN" %in% codes & "APHIAID" %in% codes ){
+    #this component tries to find aphiaids using any suggested spellings that 
+    #came from finding the TSN
     dblCheck = rbind(aphia_uncertain,aphia_mystery)
     if(nrow(dblCheck)>0){
       dblCheck = dblCheck[dblCheck$ID %in% tsn_known[!is.na(tsn_known$SUGG_SPELLING) ,"ID"],]
       if(nrow(dblCheck)>0){
-        correctors = tsn_known[tsn_known$ID %in% dblCheck$ID,c("ID","SUGG_SPELLING")]
+        correctors = tsn_known[tsn_known$ID %in% dblCheck$ID,c("ID","SUGG_SPELLING","CODE_SVC")]
         if (nrow(correctors)>0){
           correctors$SCI_COL_CLN<-correctors$COMM_COL_CLN<-correctors$SUGG_SPELLING
           correctors$SUGG_SPELLING<-NULL
-          browser()
           dblCheckTAXSCI =   chk_taxize(correctors, "SCI_COL_CLN",searchtype = 'scientific')
-          dblCheckTAXCOMM =   chk_taxize(correctors, "COMM_COL_CLN",searchtype = 'common')
           dblCheckWORRMSSCI =   chk_worrms(correctors, "SCI_COL_CLN",searchtype = 'scientific')
-          dblCheckWORRMSCOMM =   chk_worrms(correctors, "COMM_COL_CLN",searchtype = 'common')
-          newres = rbind(dblCheckTAXSCI,dblCheckTAXCOMM,dblCheckWORRMSSCI,dblCheckWORRMSCOMM) 
+          newres = rbind(dblCheckTAXSCI,dblCheckWORRMSSCI) 
           newres=newres[newres$CODE_DEFINITIVE %in% TRUE,]
-          check = unique(newres[c("ID", "CODE")])
-          browser()
-          aphia_mystery = aphia_mystery[!(aphia_mystery$ID %in% newres$ID),]
-          aphia_known = rbind(aphia_known,newres)
+          newres = merge(newres, correctors[,c("ID","CODE_SVC")], by = "ID")
+          newres[,"CODE_SRC"]<-paste0("scientific via (",newres$CODE_SVC.y,")")
+          newres$CODE_SVC.y<-NULL
+          colnames(newres)[colnames(newres) == 'CODE_SVC.x'] <- 'CODE_SVC'
+          defCheck = assignDefinitive(df = newres, masterList = spec_list[,c("ID", "SCI_COL_CLN", "COMM_COL_CLN"),])
+          newdefinitive= defCheck[[1]]
+          newAphia_mystery= defCheck[[2]]
+          if (!exists("aphia_known")){
+            aphia_known<-newdefinitive
+          }else{
+            aphia_known <- unique(rbind(aphia_known,newdefinitive))
+          }
+          aphia_mystery = rbind(aphia_mystery,newAphia_mystery)
+          aphia_mystery = aphia_mystery[!aphia_mystery$ID %in% aphia_known$ID,]
+          rm(defCheck)
+          rm(newdefinitive)
+          rm(newAphia_mystery)
         }
       }
     }
@@ -318,7 +320,7 @@ getTaxaIDs <- function(spec_list = NULL,
     multi_final$SCI_COL_CLN<-NULL
     #multi_final$COMM_COL_CLN<-NULL
   }
-    
+  
   res = list(spec_list_final, multi_final)
   return(res)
 }
