@@ -17,6 +17,7 @@ chk_worrmsTSN<-function(df = NULL){
   #added loop since one record with no results botched the whole call;
   #likely a huge performance hit
   for (i in 1:total) {
+    cat(paste0("\tworrms|AphiaID|",df[df$CODE_TYPE == "APHIAID","AphiaID"][i],"\n"), file = "getTaxaIDs.log", append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(df[i,"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {

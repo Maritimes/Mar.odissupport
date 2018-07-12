@@ -78,6 +78,11 @@ getTaxaIDs <- function(spec_list = NULL,
                        sci_Filts = NULL,
                        comm_Filts = NULL,
                        codes = c("APHIAID", "TSN")) {
+  log_nm = "getTaxaIDs.log"
+  log_con <- file(log_nm)
+  cat(paste0("Initiated at ",format(Sys.time(), "%Y-%m-%d %H:%M"),"\n"), file = log_con) 
+  
+  cat(paste0("A log file has been generated at ",file.path(getwd(),log_nm),".\nIn case of failure, that file will reveal the last successful operation"))
   #filters are the same, but might be handy to be able to remove things from
   #common names but not scientific, and vice versa
   allFilts <- c("BAIT", "DIGESTED","UNIDENTIFIED PER","UNIDENTIFIED SPECIES",
@@ -99,7 +104,7 @@ getTaxaIDs <- function(spec_list = NULL,
   doSci = F
   spec_list$COMM_COL_CLN = NA
   doComm = F
-  
+
   if (!is.null(sci_col)) {
     #remove whitespace
     spec_list$SCI_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list[, sci_col]))
@@ -107,6 +112,12 @@ getTaxaIDs <- function(spec_list = NULL,
     spec_list[grepl(x=spec_list[, sci_col],ignore.case = TRUE, pattern = paste(c(allFilts, sciFilts), collapse = "|")),"SCI_COL_CLN"]<-NA
     
     #remove bad bits, but retain the rest of the string)
+
+    #SCI names never have brackets - get rid of them, and everything they contain
+    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\(.*?\\)"),"SCI_COL_CLN"]<-
+      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\(.*?\\)"),"SCI_COL_CLN"],
+           pattern = "\\(.*?\\)",replacement = "") 
+    
     #(NS) or NS
     spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"]<-
       gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"],
@@ -150,6 +161,8 @@ getTaxaIDs <- function(spec_list = NULL,
     spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
     doComm = T
   } 
+  
+  cat(paste0("Input data successfully filtered\n"), file = "getTaxaIDs.log", append = TRUE)
   definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
   cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
   definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
@@ -169,6 +182,8 @@ getTaxaIDs <- function(spec_list = NULL,
   tsn_mystery = data.frame()
   
   if("APHIAID" %in% codes){
+    
+    cat(paste0("AphiaID checks starting\n"), file = "getTaxaIDs.log", append = TRUE)
     theAphiaIDs <- getAphiaIDs(mysteryAPHIAID = mysteryAPHIAID, 
                                masterList = spec_list[,c("ID", "SCI_COL_CLN", "COMM_COL_CLN"),], 
                                doSci=doSci, doComm=doComm)
@@ -193,6 +208,8 @@ getTaxaIDs <- function(spec_list = NULL,
   }
   
   if("TSN" %in% codes){
+    
+    cat(paste0("TSN checks starting\n"), file = "getTaxaIDs.log", append = TRUE)
     if ("APHIAID" %in% codes) {
       knownAphias <- theAphiaIDs[[1]][!is.na(theAphiaIDs[[1]]$CODE),]
       if (nrow(knownAphias)<1)knownAphias <-NULL
@@ -229,6 +246,7 @@ getTaxaIDs <- function(spec_list = NULL,
       if(nrow(dblCheck)>0){
         correctors = tsn_known[tsn_known$ID %in% dblCheck$ID,c("ID","SUGG_SPELLING","CODE_SVC")]
         if (nrow(correctors)>0){
+          cat(paste0("AphiaID re-check initiated (using suggested spellings)\n"), file = "getTaxaIDs.log", append = TRUE)
           correctors$SCI_COL_CLN<-correctors$COMM_COL_CLN<-correctors$SUGG_SPELLING
           correctors$SUGG_SPELLING<-NULL
           dblCheckTAXSCI =   chk_taxize(correctors, "SCI_COL_CLN",searchtype = 'scientific')
@@ -317,6 +335,7 @@ getTaxaIDs <- function(spec_list = NULL,
     multi_final="none"
   }
   if (class(multi_final) == 'data.frame'){
+    cat(paste0("Multiple codes were found for some species\n"), file = "getTaxaIDs.log", append = TRUE)
     colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
     multi_final = merge(spec_list, multi_final, by="ID", all.y = T)
     multi_final$ID<-NULL
@@ -325,5 +344,7 @@ getTaxaIDs <- function(spec_list = NULL,
   }
   
   res = list(spec_list_final, multi_final)
+  
+  cat("####################################################\n", file = "getTaxaIDs.log", append = TRUE)
   return(res)
 }

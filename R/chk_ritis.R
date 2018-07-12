@@ -22,6 +22,7 @@ chk_ritis <- function(df = NULL,
   results=df[0,]
   
   for (i in 1:total) {
+    cat(paste0("\tritis|",searchtype,"|",df[,field][i],"\n"), file = "getTaxaIDs.log", append = TRUE)
     setWinProgressBar(pb, i, title = NULL, label = paste0(df[,field][i]," (", total-i," left)"))
   if (searchtype == 'scientific') {
       this <- tryCatch({
