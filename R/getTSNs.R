@@ -13,8 +13,13 @@
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, masterList = NULL){
   if (!is.null(knownAphias))  {
-
-    aphiaTSNRes =   chk_worrmsTSN(knownAphias)
+    recs_aphiaid = unique(knownAphias[!is.na(knownAphias$CODE),"CODE"])
+    
+    aphiaTSNRes =   chk_worrmsTSN(recs_aphiaid,knownAphias)
+    colnames(knownAphias)[colnames(knownAphias)=='CODE']<-"APHIAID"
+    aphiaTSNRes = merge(knownAphias[,c("ID","APHIAID","SCI_COL_CLN","COMM_COL_CLN")],aphiaTSNRes, by = "APHIAID")
+    aphiaTSNRes$APHIAID<-NULL
+   
     defCheck = assignDefinitive(df = aphiaTSNRes, masterList = masterList)
     newdefinitive= defCheck[[1]]
     #mysteryTSN= defCheck[[2]] #these are just the ones we couldn't find via an aphiaid
@@ -28,13 +33,14 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
     rm(newdefinitive)
   }
   if (doSci  & (nrow(mysteryTSN)>0))  {
-    cln = skipUselessRecs(mysteryTSN, "SCI_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      sci = cln[[1]]
-    }else{
-      sci =   chk_ritis(cln[[1]], "SCI_COL_CLN",searchtype = 'scientific')
+
+    recs_sci = unique(mysteryTSN[!is.na(mysteryTSN$SCI_COL_CLN),"SCI_COL_CLN"])
+    if (length(recs_sci)>0) {
+      sci =   chk_ritis(recs_sci, searchtype = 'scientific')
     }
+    sci = merge(mysteryTSN[,-which(colnames(mysteryTSN) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], sci, all.x=TRUE, by.x="SCI_COL_CLN", by.y="joincol")
+    sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]," (SCIENTIFIC)")
+
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -46,20 +52,15 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
       }
       rm(defCheck)
       rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryTSN = rbind(mysteryTSN,cln[[2]])
-        rm(cln)
-      }
     }
   }
   if (doComm  & (nrow(mysteryTSN)>0))  {
-    cln = skipUselessRecs(mysteryTSN, "COMM_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      comm = cln[[1]]
-    }else{
-      comm =   chk_ritis(cln[[1]], "COMM_COL_CLN",searchtype = 'common')
+    recs_comm = unique(mysteryTSN[!is.na(mysteryTSN$COMM_COL_CLN),"COMM_COL_CLN"])
+    if (length(recs_comm)>0) {
+      comm =   chk_ritis(recs_comm, searchtype = 'common')
     }
+    comm = merge(mysteryTSN[,-which(colnames(mysteryTSN) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], comm, all.x=TRUE, by.x="COMM_COL_CLN", by.y="joincol")
+    comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]," (COMMON)")
 
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
@@ -72,10 +73,6 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
       }
       rm(defCheck)
       rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryTSN = rbind(mysteryTSN,cln[[2]])
-        rm(cln)
-      }
     }
   }
   res = list(definitiveTSN, mysteryTSN)

@@ -4,14 +4,11 @@
 \alias{chk_taxize}
 \title{chk_taxize}
 \usage{
-chk_taxize(df = NULL, field = NULL, searchtype = NULL)
+chk_taxize(recs = NULL, searchtype = NULL)
 }
 \arguments{
-\item{df}{- df of species for which the APHIAID is either unknown or not
+\item{recs}{- - vector of taxa names for which the APHIAID is either unknown or not
 definitive}
-
-\item{field}{- field in the df containing the value to check against the 
-service}
 
 \item{searchtype}{- flag indicating whether scientific or common names should 
 be used checking the services}

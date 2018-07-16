@@ -1,10 +1,8 @@
 #' @title chk_taxize
 #' @description This function sends either the scientific or common name of each
 #' species off to taxize
-#' @param df - df of species for which the APHIAID is either unknown or not
+#' @param recs - - vector of taxa names for which the APHIAID is either unknown or not
 #' definitive
-#' @param field - field in the df containing the value to check against the 
-#' service
 #' @param searchtype - flag indicating whether scientific or common names should 
 #' be used checking the services
 #' @importFrom taxize get_wormsid
@@ -12,18 +10,25 @@
 #' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
-chk_taxize <- function(df = NULL,
-           field = NULL,
+chk_taxize <- function(recs = NULL,
            searchtype = NULL) {
-  total <- nrow(df)
-  pb <- winProgressBar(title = paste0("APHIAID>TAXIZE: via ", searchtype," names"), label=df[,field][1], min = 0, max = total, width = 300)
-    results=df[0,]
+  col = ifelse(searchtype=="scientific","SCI_COL_CLN", "COMM_COL_CLN")
+  df= data.frame(joincol = "MMMMMMM",
+                   CODE = NA,
+                   CODE_SVC = 'TAXIZE',
+                   CODE_TYPE = 'APHIAID',
+                   CODE_SRC = searchtype,
+                   CODE_DEFINITIVE = FALSE,
+                   SUGG_SPELLING = NA)
+  total <- length(recs)
+  pb <- winProgressBar(title = paste0("APHIAID>TAXIZE: via ", searchtype," names"), label=recs[1], min = 0, max = total, width = 300)
+    df=df[0,]
     for (i in 1:total) {
-      cat(paste0("\tTaxize|",searchtype,"|",df[,field][i],"\n"), file = "getTaxaIDs.log", append = TRUE)
-      setWinProgressBar(pb, i, title = NULL, label = paste0(df[,field][i]," (", total-i," left)"))
+      cat(paste0("\tTaxize|",searchtype,"|",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
+      setWinProgressBar(pb, i, title = NULL, label = paste0(recs[i]," (", total-i," left)"))
       this <- tryCatch({
         taxize::get_wormsid(
-          query = df[,field][i],
+          query = recs[i],
           searchtype = searchtype,
           ask = FALSE,
           verbose = FALSE,
@@ -36,36 +41,39 @@ chk_taxize <- function(df = NULL,
         
       })
       if (is.null(this)) {
-         this= data.frame(ID =df[i,"ID"],
-                       CODE = NA,
-                       CODE_SVC = 'TAXIZE',
-                       CODE_TYPE = 'APHIAID',
-                       CODE_SRC = searchtype,
-                       CODE_DEFINITIVE = FALSE,
-                       SUGG_SPELLING = NA)
+         thisrec= data.frame(joincol = recs[i],
+                             CODE = NA,
+                             CODE_SVC = 'TAXIZE',
+                             CODE_TYPE = 'APHIAID',
+                             CODE_SRC = searchtype,
+                             CODE_DEFINITIVE = FALSE,
+                             SUGG_SPELLING = NA)
       } else {
         tmp=data.frame(this)
         tmp = tmp[,c("ids","multiple_matches","pattern_match")]
         
-        this = data.frame(ID = df$ID[i],
-                          multiple_matches = tmp$multiple_matches,
+        thisrec = data.frame(multiple_matches = tmp$multiple_matches,
                           pattern_match = tmp$pattern_match,
+                          joincol = recs[i],
                           CODE = tmp$ids,
                           CODE_SRC = searchtype,
                           CODE_SVC = 'TAXIZE',
                           CODE_TYPE = 'APHIAID',
-                          CODE_DEFINITIVE = FALSE,
+                          CODE_DEFINITIVE = NA,
                           SUGG_SPELLING = NA
         )
+        
+        thisrec[thisrec$multiple_matches==FALSE & thisrec$pattern_match ==FALSE,"CODE_DEFINITIVE"]<-TRUE
+        thisrec[thisrec$multiple_matches==TRUE & thisrec$pattern_match ==FALSE,"CODE_DEFINITIVE"]<-FALSE
+        if (is.na(thisrec$CODE_DEFINITIVE))browser()
+        thisrec$multiple_matches<-NULL
+        thisrec$pattern_match<-NULL
         rm(tmp)
-        this[this$multiple_matches==FALSE & this$match =="found","CODE_DEFINITIVE"]<-T
-        this[this$multiple_matches==TRUE & this$pattern_match ==FALSE,"CODE_DEFINITIVE"]<-T
-        this$multiple_matches<-NULL
-        this$pattern_match<-NULL
       }
-      this = merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")],this, by="ID", all.y=TRUE)
-      results = rbind(results,this)
+      df = rbind(df,thisrec)
     }
     close(pb)
-    return(results)
+    df=df[df$joincol!="MMMMMMM",]
+    names(df)[names(df) == "joincol"] <- col
+    return(df)
   }

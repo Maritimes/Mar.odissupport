@@ -11,14 +11,14 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NULL){
+  
   if (doSci & (nrow(mysteryAPHIAID)>0))  {
-    cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      sci = cln[[1]]
-    }else{
-      sci =   chk_taxize(cln[[1]], "SCI_COL_CLN",searchtype = 'scientific')
+    recs_sci = unique(mysteryAPHIAID[!is.na(mysteryAPHIAID$SCI_COL_CLN),"SCI_COL_CLN"])
+    if (length(recs_sci)>0) {
+      sci =   chk_taxize(recs_sci, searchtype = 'scientific')
     }
+    sci = merge(mysteryAPHIAID[,-which(colnames(mysteryAPHIAID) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], sci, all.x=TRUE, by="SCI_COL_CLN")
+    sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]," (SCIENTIFIC)")
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -30,21 +30,16 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
-        rm(cln)
-      }
     }
   }
   if (doComm & (nrow(mysteryAPHIAID)>0)) {
-    cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      comm = cln[[1]]
-    }else{
-      comm =   chk_taxize(cln[[1]], "COMM_COL_CLN",searchtype = 'common')
+    recs_comm= unique(mysteryAPHIAID[!is.na(mysteryAPHIAID$COMM_COL_CLN),"COMM_COL_CLN"])
+    if (length(recs_comm)>0) {
+      comm =   chk_taxize(recs_comm, searchtype = 'common')
     }
-
+    
+    comm = merge(mysteryAPHIAID[,-which(colnames(mysteryAPHIAID) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], comm, all.x=TRUE, by="COMM_COL_CLN")
+    comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]," (COMMON)")
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -53,23 +48,16 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
         definitiveAPHIAID<-newdefinitive
       }else{
         definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-      }
-      rm(defCheck)
-      rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
-        rm(cln)
       }
     }
   }
   if (doSci  & (nrow(mysteryAPHIAID)>0))  {
-    cln = skipUselessRecs(mysteryAPHIAID, "SCI_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      sci = cln[[1]]
-    }else{
-      sci =   chk_worrms(cln[[1]], "SCI_COL_CLN", searchtype = 'scientific')
+    recs_sci = unique(mysteryAPHIAID[!is.na(mysteryAPHIAID$SCI_COL_CLN),"SCI_COL_CLN"])
+    if (length(recs_sci)>0) {
+      sci =   chk_worrms(recs_sci, searchtype = 'scientific')
     }
+    sci = merge(mysteryAPHIAID[,-which(colnames(mysteryAPHIAID) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], sci, all.x=TRUE, by="SCI_COL_CLN")
+    sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(sci[!is.na(sci$SUGG_SPELLING),"SUGG_SPELLING"]," (SCIENTIFIC)")
     if (nrow(sci)>0) {
       defCheck = assignDefinitive(df = sci, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -81,20 +69,16 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
       }
       rm(defCheck)
       rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
-        rm(cln)
-      }
     }
   }
-  if (doComm & (nrow(mysteryAPHIAID)>0)) {
-    cln = skipUselessRecs(mysteryAPHIAID, "COMM_COL_CLN")
-    if (nrow(cln[[1]])<1){
-      print("No valid values to check - skipping check")
-      comm = cln[[1]]
-    }else{
-      comm =   chk_worrms(cln[[1]], "COMM_COL_CLN", searchtype = 'common')
+  if (doComm & (nrow(mysteryAPHIAID)>0)) {    
+    recs_comm= unique(mysteryAPHIAID[!is.na(mysteryAPHIAID$COMM_COL_CLN),"COMM_COL_CLN"])
+    if (length(recs_comm)>0) {
+      comm =   chk_worrms(recs_comm, searchtype = 'common')
     }
+    
+    comm = merge(mysteryAPHIAID[,-which(colnames(mysteryAPHIAID) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], comm, all.x=TRUE, by="COMM_COL_CLN")
+    comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]<-paste0(comm[!is.na(comm$SUGG_SPELLING),"SUGG_SPELLING"]," (COMMON)")
     if (nrow(comm)>0) {
       defCheck = assignDefinitive(df = comm, masterList = masterList)
       newdefinitive= defCheck[[1]]
@@ -103,12 +87,6 @@ getAphiaIDs<-function(mysteryAPHIAID = NULL, doSci=T, doComm=T, masterList = NUL
         definitiveAPHIAID<-newdefinitive
       }else{
         definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-      }
-      rm(defCheck)
-      rm(newdefinitive)
-      if (nrow(cln[[2]])>0){
-        mysteryAPHIAID = rbind(mysteryAPHIAID,cln[[2]])
-        rm(cln)
       }
     }
   }

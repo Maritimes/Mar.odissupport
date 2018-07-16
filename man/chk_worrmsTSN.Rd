@@ -4,10 +4,13 @@
 \alias{chk_worrmsTSN}
 \title{chk_worrmsTSN}
 \usage{
-chk_worrmsTSN(df = NULL)
+chk_worrmsTSN(recs = NULL, knownAphias = NULL)
 }
 \arguments{
-\item{df}{- df of species for which we already have an APHIAID}
+\item{recs}{- vector of taxa names for which we already have an APHIAID}
+
+\item{knownAphias}{- dataframe of taxas for which we have the AphiaIDs and a
+field called "SCI_COL_CLN" containing and identifying name for the taxa.}
 }
 \description{
 This function sends APHIAIDs to worrms to see if it can find a 

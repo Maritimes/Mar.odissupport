@@ -4,14 +4,11 @@
 \alias{chk_worrms}
 \title{chk_worrms}
 \usage{
-chk_worrms(df = NULL, field = NULL, searchtype = NULL)
+chk_worrms(recs = NULL, searchtype = NULL)
 }
 \arguments{
-\item{df}{- df of species for which the APHIAID is either unknown or not
+\item{recs}{-  - vector of taxa names for which the APHIAID is either unknown or not
 definitive}
-
-\item{field}{- field in the df containing the value to check against the 
-service}
 
 \item{searchtype}{- flag indicating whether scientific or common names should 
 be used checking the services}

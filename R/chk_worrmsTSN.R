@@ -1,33 +1,44 @@
 #' @title chk_worrmsTSN
 #' @description This function sends APHIAIDs to worrms to see if it can find a 
 #' corresponding TSN
-#' @param df - df of species for which we already have an APHIAID
+#' @param recs - vector of taxa names for which we already have an APHIAID
+#' @param knownAphias - dataframe of taxas for which we have the AphiaIDs and a
+#' field called "SCI_COL_CLN" containing and identifying name for the taxa. 
 #' @importFrom worrms wm_external
 #' @importFrom utils winProgressBar
 #' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
-chk_worrmsTSN<-function(df = NULL){
- total <- nrow(df)
-  pb <- winProgressBar(title = paste0("TSN>WORRMS: via determined APHIAIDs"), label=df[1,"SCI_COL_CLN"], min = 0, max = total, width = 300)
-  results=df[0,]
-  names(df)[names(df)=="CODE"]= "AphiaID"
-  names(df)[names(df)=="CODE_DEFINITIVE"]= "AphiaID_DEF"
+chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
+  total <- length(recs)
+  pb <- winProgressBar(title = paste0("TSN>WORRMS: via determined APHIAIDs"), label=recs[1], min = 0, max = total, width = 300)
+  
+  df= data.frame(joincol = "MMMMMMM",
+                 CODE = NA,
+                 CODE_SVC = 'WORRMS',
+                 CODE_TYPE = 'TSN',
+                 CODE_SRC = 'APHIAID',
+                 CODE_DEFINITIVE = FALSE,
+                 SUGG_SPELLING = NA)
+  # names(df)[names(df)=="CODE"]= "AphiaID"
+  # names(df)[names(df)=="CODE_DEFINITIVE"]= "AphiaID_DEF"
   
   #added loop since one record with no results botched the whole call;
   #likely a huge performance hit
+
   for (i in 1:total) {
-    cat(paste0("\tworrms|AphiaID|",df[df$CODE_TYPE == "APHIAID","AphiaID"][i],"\n"), file = "getTaxaIDs.log", append = TRUE)
-      setWinProgressBar(pb, i, title = NULL, label = paste0(df[i,"SCI_COL_CLN"]," (", total-i," left)"))
+    knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]
+    cat(paste0("\tworrms|AphiaID|",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = "getTaxaIDs.log", append = TRUE)
+      setWinProgressBar(pb, i, title = NULL, label = paste0(knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
-        worrms::wm_external(id = as.integer(df[df$CODE_TYPE == "APHIAID","AphiaID"][i]))
+        worrms::wm_external(id = as.integer(recs[i]))
       },
       error=function(cond){
       }
     )
     if(is.null(this)){
-      this= data.frame(ID =df[i,"ID"],
+      thisrec= data.frame(joincol = trimws(toupper(recs[i])),
                        CODE = NA,
                        CODE_SVC = 'WORRMS',
                        CODE_TYPE = 'TSN',
@@ -35,31 +46,32 @@ chk_worrmsTSN<-function(df = NULL){
                        CODE_DEFINITIVE = FALSE,
                        SUGG_SPELLING = NA)
     }else{
-      this = data.frame(CODE = this,
-                        ID = df$ID[i],
+      thisrec = data.frame(joincol = trimws(toupper(recs[i])),
+                        CODE = this,   
                         CODE_SVC = 'WORRMS',
                         CODE_TYPE = 'TSN',
                         CODE_SRC = "APHIAID",
                         CODE_DEFINITIVE = FALSE,
                         SUGG_SPELLING = NA
       )
-      for (j in 1:nrow(this)){
+      for (j in 1:nrow(thisrec)){
         thisDefCheck <- tryCatch({
-          data.frame(ritis::usage(this[j,"CODE"]))
+          data.frame(ritis::usage(thisrec[j,"CODE"]))
         },
         error = function(cond) {
         })
         if(is.null(thisDefCheck)){
-          this[j,"CODE_DEFINITIVE"]<-FALSE
+          thisrec[j,"CODE_DEFINITIVE"]<-FALSE
         }else{
-          this[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
+          thisrec[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
         }
       }
       
     }
-    this = merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")],this, by="ID", all.y=TRUE)
-    results = rbind(results,this)
+    df = rbind(df,thisrec)
   }
   close(pb)
-  return(results)
+  df=df[df$joincol!="MMMMMMM",]
+  names(df)[names(df) == "joincol"] <- "APHIAID"
+  return(df)
 }

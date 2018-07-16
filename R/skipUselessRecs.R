@@ -8,6 +8,9 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 skipUselessRecs <-function(df = NULL, field = NULL){
+  recs = unique(df[!is.na(df[,field]),field])
+  
+  
   skips = df[0,]
   if (nrow(df[is.na(df[,field]),])>0)skips = rbind(skips, df[is.na(df[,field]),])
   mystery = df[!(df$ID %in% skips$ID),]

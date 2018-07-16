@@ -1,10 +1,8 @@
 #' @title chk_worrms
 #' @description This function sends either the scientific or common name of each
 #' species off to worrms
-#' @param df - df of species for which the APHIAID is either unknown or not
+#' @param recs -  - vector of taxa names for which the APHIAID is either unknown or not
 #' definitive
-#' @param field - field in the df containing the value to check against the 
-#' service
 #' @param searchtype - flag indicating whether scientific or common names should 
 #' be used checking the services
 #' @importFrom worrms wm_records_name
@@ -13,30 +11,38 @@
 #' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
-chk_worrms <- function(df = NULL,
-                       field = NULL,
+chk_worrms <- function(recs = NULL,
                        searchtype = NULL) {
-  total <- nrow(df)
-  pb <- winProgressBar(title = paste0("APHIAID>WORRMS: via ", searchtype," names"), label=df[,field][1], min = 0, max = total, width = 300)
-  results=df[0,]
+  col = ifelse(searchtype=="scientific","SCI_COL_CLN", "COMM_COL_CLN")
+  df= data.frame(joincol = "MMMMMMM",
+                   CODE = NA,
+                   CODE_SVC = 'WORRMS',
+                   CODE_TYPE = 'APHIAID',
+                   CODE_SRC = searchtype,
+                   CODE_DEFINITIVE = FALSE,
+                   SUGG_SPELLING = NA)
+  total <- length(recs)
+
+  pb <- winProgressBar(title = paste0("APHIAID>WORRMS: via ", searchtype," names"), label=recs[1], min = 0, max = total, width = 300)
+  df=df[0,]
   for (i in 1:total) {
-    cat(paste0("\tworrms|",searchtype,"|",df[,field][i],"\n"), file = "getTaxaIDs.log", append = TRUE)
-    setWinProgressBar(pb, i, title = NULL, label = paste0(df[,field][i]," (", total-i," left)"))
+    cat(paste0("\tworrms|",searchtype,"|",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
+    setWinProgressBar(pb, i, title = NULL, label = paste0(recs[i]," (", total-i," left)"))
     if (searchtype == 'scientific') {
       this <- tryCatch({
-        worrms::wm_records_name(df[,field][i], fuzzy = F, marine_only = T)
+        worrms::wm_records_name(recs[i], fuzzy = F, marine_only = T)
       },
       error = function(cond) {
       })
     } else if (searchtype == 'common'){
       this <- tryCatch({
-        worrms::wm_records_common(df[,field][i], fuzzy = F, marine_only = T)
+        worrms::wm_records_common(recs[i], fuzzy = F, marine_only = T)
       },
       error = function(cond) {
       })
     }
     if(is.null(this)){
-      this= data.frame(ID =df[i,"ID"],
+      thisrec= data.frame(joincol = trimws(toupper(recs[i])),
                        CODE = NA,
                        CODE_SVC = 'WORRMS',
                        CODE_TYPE = 'APHIAID',
@@ -45,24 +51,28 @@ chk_worrms <- function(df = NULL,
                        SUGG_SPELLING = NA)
     } else {
       tmp = data.frame(this[,c("status","valid_AphiaID","valid_name")]) #"unacceptreason"
-      
-      this = data.frame(ID = df$ID[i],
+      #if (length(tmp[tmp$status %in% c("unaccepted") & !is.na(tmp$valid_AphiaID),"valid_AphiaID"]>0))browser()
+      thisrec = data.frame(
                         status = tmp$status,
+                        joincol = trimws(toupper(recs[i])),
                         CODE = tmp$valid_AphiaID,
                         CODE_SRC = searchtype,
                         CODE_SVC = 'WORRMS',
                         CODE_TYPE = 'APHIAID',
                         CODE_DEFINITIVE = FALSE,
-                        SUGG_SPELLING = tmp$valid_name
+                        SUGG_SPELLING =trimws(toupper(tmp$valid_name))
       )
+      thisrec[thisrec$status %in% c("accepted") & !is.na(thisrec$CODE),"CODE_DEFINITIVE"]<-TRUE 
+      #unaccepted name, but valid code and suggested spelling
+      thisrec[thisrec$status %in% c("unaccepted") & !is.na(thisrec$CODE) & !is.na(thisrec$SUGG_SPELLING),"CODE_DEFINITIVE"]<-TRUE
+      
+      thisrec$status<-NULL
       rm(tmp)
-      this[this$status %in% c("accepted","unaccepted") & !is.na(this$CODE),"CODE_DEFINITIVE"]<-TRUE
-      this$status<-NULL
-    }
-    this = merge(df[,c("ID","SCI_COL_CLN","COMM_COL_CLN")],this, by="ID", all.y=TRUE)
-    results = rbind(results,this)
+    }   
+      df = rbind(df,thisrec)
   }
-  
   close(pb)
-  return(results)
+  df=df[df$joincol!="MMMMMMM",]
+  names(df)[names(df) == "joincol"] <- col
+  return(df)
 }

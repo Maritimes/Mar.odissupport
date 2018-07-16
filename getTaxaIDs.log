@@ -1,0 +1,33 @@
+Initiated at 2018-07-16 14:53
+Input data successfully filtered
+AphiaID checks starting
+	Taxize|scientific|MYXINIFORMES
+	Taxize|scientific|MYXINIDAE
+	Taxize|scientific|MYXINE GLUTINOSA
+	Taxize|scientific|PETROMYZONTIFORMES
+	Taxize|scientific|PETROMYZON MARINUS
+	Taxize|scientific|SELACHII
+	Taxize|scientific|SQUALIFORMES
+	Taxize|scientific|DALATIIDAE
+	Taxize|scientific|SOMNIOSUS MICROCEPHALUS
+	Taxize|scientific|SQUALIDAE
+	Taxize|common|HAGFISH ATLANTIC
+	Taxize|common|LAMPREY SEA
+	worrms|scientific|MYXINE GLUTINOSA
+	worrms|scientific|PETROMYZON MARINUS
+TSN checks starting
+	worrms|AphiaID|10197(MYXINIFORMES/HAGFISHES)
+	worrms|AphiaID|101162(MYXINIDAE/HAGFISHES)
+	worrms|AphiaID|10201(PETROMYZONTIFORMES/LAMPREYS)
+	worrms|AphiaID|368408(SELACHII/CARTILAGINOUS FISHES)
+	worrms|AphiaID|10211(SQUALIFORMES/SHARKS,DOGFISH)
+	worrms|AphiaID|105714(DALATIIDAE/SHARKS,SLEEPER)
+	worrms|AphiaID|105919(SOMNIOSUS MICROCEPHALUS/SHARK,GREENLAND)
+	worrms|AphiaID|105716(SQUALIDAE/DOGFISH SHARKS)
+	worrms|AphiaID|101170(MYXINE GLUTINOSA/HAGFISH ATLANTIC)
+	worrms|AphiaID|101174(PETROMYZON MARINUS/LAMPREY SEA)
+	ritis|scientific|SELACHII
+	ritis|common|CARTILAGINOUS FISHES
+Multiple codes were found for some species
+Completed in 00:00:28
+####################################################
