@@ -15,6 +15,7 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
   if (!is.null(knownAphias))  {
     recs_aphiaid = unique(knownAphias[!is.na(knownAphias$CODE),"CODE"])
     
+    cat(paste0("\tworrms > Discovered AphiaIDs \n"), file = "getTaxaIDs.log", append = TRUE)
     aphiaTSNRes =   chk_worrmsTSN(recs_aphiaid,knownAphias)
     colnames(knownAphias)[colnames(knownAphias)=='CODE']<-"APHIAID"
     aphiaTSNRes = merge(knownAphias[,c("ID","APHIAID","SCI_COL_CLN","COMM_COL_CLN")],aphiaTSNRes, by = "APHIAID")
@@ -36,6 +37,7 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
 
     recs_sci = unique(mysteryTSN[!is.na(mysteryTSN$SCI_COL_CLN),"SCI_COL_CLN"])
     if (length(recs_sci)>0) {
+      cat(paste0("\tritis > scientific names\n"), file = "getTaxaIDs.log", append = TRUE)
       sci =   chk_ritis(recs_sci, searchtype = 'scientific')
     }
     sci = merge(mysteryTSN[,-which(colnames(mysteryTSN) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], sci, all.x=TRUE, by.x="SCI_COL_CLN", by.y="joincol")
@@ -57,6 +59,7 @@ getTSNs<-function(mysteryTSN = NULL, doSci=T, doComm=T, knownAphias = NULL, mast
   if (doComm  & (nrow(mysteryTSN)>0))  {
     recs_comm = unique(mysteryTSN[!is.na(mysteryTSN$COMM_COL_CLN),"COMM_COL_CLN"])
     if (length(recs_comm)>0) {
+      cat(paste0("\tritis > common names\n"), file = "getTaxaIDs.log", append = TRUE)
       comm =   chk_ritis(recs_comm, searchtype = 'common')
     }
     comm = merge(mysteryTSN[,-which(colnames(mysteryTSN) %in% c("CODE","CODE_SVC","CODE_TYPE","CODE_SRC","CODE_DEFINITIVE","SUGG_SPELLING"))], comm, all.x=TRUE, by.x="COMM_COL_CLN", by.y="joincol")

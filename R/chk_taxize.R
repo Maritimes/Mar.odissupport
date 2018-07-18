@@ -24,7 +24,7 @@ chk_taxize <- function(recs = NULL,
   pb <- winProgressBar(title = paste0("APHIAID>TAXIZE: via ", searchtype," names"), label=recs[1], min = 0, max = total, width = 300)
     df=df[0,]
     for (i in 1:total) {
-      cat(paste0("\tTaxize|",searchtype,"|",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
+      cat(paste0("\t\t",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(recs[i]," (", total-i," left)"))
       this <- tryCatch({
         taxize::get_wormsid(

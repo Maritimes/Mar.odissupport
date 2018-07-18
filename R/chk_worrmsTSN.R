@@ -11,7 +11,7 @@
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
   total <- length(recs)
-  pb <- winProgressBar(title = paste0("TSN>WORRMS: via determined APHIAIDs"), label=recs[1], min = 0, max = total, width = 300)
+  pb <- winProgressBar(title = paste0("TSN>WORRMS: via discovered APHIAIDs"), label=recs[1], min = 0, max = total, width = 300)
   
   df= data.frame(joincol = "MMMMMMM",
                  CODE = NA,
@@ -28,7 +28,7 @@ chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
 
   for (i in 1:total) {
     knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]
-    cat(paste0("\tworrms|AphiaID|",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = "getTaxaIDs.log", append = TRUE)
+    cat(paste0("\t\t",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = "getTaxaIDs.log", append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {

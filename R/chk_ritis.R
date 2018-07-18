@@ -24,9 +24,9 @@ chk_ritis <- function(recs = NULL,
                  SUGG_SPELLING = NA)
   total <- length(recs)
   pb <- winProgressBar(title = paste0("TSN>RITIS: via ", searchtype," names"), label=recs[1], min = 0, max = total, width = 300)
-  df=df[0,]
+  results=df[0,]
   for (i in 1:total) {
-    cat(paste0("\tritis|",searchtype,"|",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
+    cat(paste0("\t\t",recs[i],"\n"), file = "getTaxaIDs.log", append = TRUE)
     setWinProgressBar(pb, i, title = NULL, label = paste0(recs[i]," (", total-i," left)"))
     if (searchtype == 'scientific') {
       this <- tryCatch({
@@ -82,11 +82,10 @@ chk_ritis <- function(recs = NULL,
         }else{
           thisrec=df[1,]
         }
-        results = rbind(df,thisrec)
+        results = rbind(results,thisrec)
         rm(thisrec)
       }
     }
-    
     if (searchtype == 'common'){   
       this <- tryCatch({
         as.data.frame(ritis::search_common(recs[i], wt = "json", raw = FALSE))
@@ -136,7 +135,7 @@ chk_ritis <- function(recs = NULL,
         }else{
           thisrec=df[1,]
         }
-        results = rbind(df,thisrec)
+        results = rbind(results,thisrec)
         rm(thisrec)
       }
     }
