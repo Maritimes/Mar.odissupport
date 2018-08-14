@@ -68,6 +68,8 @@
 #' }
 #' @param codes These are the codes you would like to determine.  \code{TSN} and
 #' \code{APHIAID} are the only valid entries.
+#' @param debug default is \code{FALSE}  This just ensure that the log file is 
+#' overwritten rather than making many new ones.
 #' @family speciesCodes
 #' @importFrom stats setNames
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
@@ -77,252 +79,245 @@ getTaxaIDs <- function(spec_list = NULL,
                        comm_col = NULL,
                        sci_Filts = NULL,
                        comm_Filts = NULL,
-                       codes = c("APHIAID", "TSN")) {
-  log_nm = "getTaxaIDs.log"
-  log_con <- file(log_nm)
+                       codes = c("APHIAID", "TSN"),
+                       debug = F) {
+  ts = ifelse(debug, "000", format(Sys.time(), "%Y%m%d_%H%M"))
+  
+  logName = paste0("getTaxaIDs_",ts,".log")
+  log_con <- file(logName)
   start = Sys.time()
   cat(paste0("Initiated at ",format(start, "%Y-%m-%d %H:%M"),"\n"), file = log_con) 
+  cat(paste0("A log file has been generated at ",file.path(getwd(),logName),"\nIn the event of failure, this file will reveal the last successful operation\n"))
+  fields = c("ID")
   
-  cat(paste0("A log file has been generated at ",file.path(getwd(),log_nm),"
-In the event of failure, this file will reveal the last successful operation"))
-  cat("
-      ")
-  #filters are the same, but might be handy to be able to remove things from
-  #common names but not scientific, and vice versa
-  allFilts <- c("BAIT", "DIGESTED","UNIDENTIFIED PER","UNIDENTIFIED SPECIES",
-                "UNID (FISH|REMAINS)+", "REMAINS","SURVEY","FSRS -","RESERVED",
-                "PURSE","^FISH( AND| \\,|$)","\\,?\\s?EGG(S?)-?","\\s?LARVAE",
-                "INVERTEBRATE","WATER","FLUID","^SAND$","EGGS",
-                "INORGANIC DEBRIS","MIXED","MUCUS","OPERCULUM","^SHARK$")
-  
-  commFilts <- c(comm_Filts,"([^']\\b[SP]{1,3}\\.?$)",
-                 "([^']\\b[a-zA-Z]{1,2}\\.?$)","SHARK ","^FISH$","/")
-  
-  sciFilts <- c(sci_Filts, "WHALE","CETACEAN","CRAB", "LOBSTER","SHRIMP",
-                "IRISH MOSS","SHARK","COD WORM","SEA CORALS","SKATE","OBSOLETE",
-                "FINFISHES","GROUNDFISH","PELAGIC FISH","\\bAND\\b","SAND TUBE",
-                "UNIDENTIFIED")
-  spec_list$ID <- seq.int(nrow(spec_list))
-  
-  spec_list$SCI_COL_CLN = NA
-  doSci = F
-  spec_list$COMM_COL_CLN = NA
-  doComm = F
-  if (!is.null(sci_col)) {
-    #remove whitespace
-    spec_list$SCI_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list[, sci_col]))
-    #remove recs matching allFilts and sci_filts
-    spec_list[grepl(x=spec_list[, sci_col],ignore.case = TRUE, pattern = paste(c(allFilts, sciFilts), collapse = "|")),"SCI_COL_CLN"]<-NA
-    
-    #remove bad bits, but retain the rest of the string)
-    #SCI names never have brackets - get rid of them, and everything they contain
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\(.*?\\)"),"SCI_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\(.*?\\)"),"SCI_COL_CLN"],
-           pattern = "\\(.*?\\)",replacement = "") 
-    #in case there we nested group, we might have an unmatched, dangling bracket
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\)"),"SCI_COL_CLN"]<-
-    gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\)"),"SCI_COL_CLN"],
-         pattern = "\\)",replacement = "") 
-    
-    #(NS) or NS
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"SCI_COL_CLN"],
-           pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
-    #SP, SP., SPP and SPP.
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "([^']\\b[SP]{1,3}\\.?$)"),"SCI_COL_CLN"],
-           pattern = "([^']\\b[SP]{1,3}\\.?$)",replacement = "") 
-    
-    spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\b[a-zA-Z]{1,2}\\."),"SCI_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$SCI_COL_CLN,ignore.case = T,pattern = "\\b[a-zA-Z]{1,2}\\."),"SCI_COL_CLN"],
-           pattern = "\\b[a-zA-Z]{1,2}\\.",replacement = "") 
-    
-    #final remove whitespace and drop really short records
-    spec_list[,"SCI_COL_CLN"]<-  gsub("(^\\s+)|(\\s+$)", "", spec_list$SCI_COL_CLN)
-    spec_list[which(nchar(spec_list$SCI_COL_CLN)<4),"SCI_COL_CLN"]<-NA
-    doSci = T
-  } 
-  if (!is.null(comm_col)) {
-    #remove whitespace
-    spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list[, comm_col]))
-    #remove recs matching allFilts and sci_filts
-    spec_list[grepl(x=spec_list[, comm_col],ignore.case = TRUE, pattern = paste(c(allFilts, commFilts), collapse = "|")),"COMM_COL_CLN"]<-NA
-    #remove bad bits, but retain the rest of the string)
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(-|,|\\s)?UNIDENTIFIED.*"),"COMM_COL_CLN"],
-           pattern = "(-|,|\\s)?UNIDENTIFIED.*",replacement = "") 
-     spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"]<-
-       gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*"),"COMM_COL_CLN"],
-            pattern = "(\\)|^|-|,|\\s)?UNID(EN)?(T?)\\.*",replacement = "")
-    #(NS) or NS
-    spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"]<-
-      gsub(x = spec_list[grepl(x = spec_list$COMM_COL_CLN,ignore.case = T,pattern = "(\\(NS\\)|\\bNS)"),"COMM_COL_CLN"],
-           pattern = "(\\(NS\\)|\\bNS)",replacement = "") 
-    
-    #stupid "FISH" record
-    spec_list[grepl(x = spec_list[,comm_col],ignore.case = T,pattern = "UNID\\. FISH"),"COMM_COL_CLN"]<-NA
-    #final remove whitespace and drop really short records
-    spec_list$COMM_COL_CLN = gsub("(^\\s+)|(\\s+$)", "", toupper(spec_list$COMM_COL_CLN))
-    spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
-    doComm = T
-  } 
-  
-  cat(paste0("Input data successfully filtered\n"), file = "getTaxaIDs.log", append = TRUE)
-  definitive = spec_list[, c("ID", "SCI_COL_CLN", "COMM_COL_CLN")]
-  cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
-
-  definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
-
-  if (doSci & doComm){
-    definitive[!is.na(definitive$SCI_COL_CLN) & !is.na(definitive$COMM_COL_CLN) ,]
-  } else if (doSci){
-    definitive[!is.na(definitive$SCI_COL_CLN) ,]
-  } else if (doComm){
-    definitive[!is.na(definitive$COMM_COL_CLN) ,]
-  } 
-  
-  
-  definitiveTSN = definitive
-  mysteryTSN = definitive
-  
-  definitiveAPHIAID = definitive
-  mysteryAPHIAID = definitive
-  rm(definitive)
-  
-  aphia_known = data.frame()
-  aphia_uncertain = data.frame()
-  aphia_mystery = data.frame()
-  tsn_known = data.frame()
-  tsn_uncertain = data.frame()
-  tsn_mystery = data.frame()
-  if("APHIAID" %in% codes){
-    start_AphiaID = Sys.time()
-    cat(paste0("AphiaID checks starting\n"), file = "getTaxaIDs.log", append = TRUE)
-    theAphiaIDs <- getAphiaIDs(mysteryAPHIAID = mysteryAPHIAID, 
-                               masterList = spec_list[,c("ID", "SCI_COL_CLN", "COMM_COL_CLN"),], 
-                               doSci=doSci, doComm=doComm)
-    aphia_known = theAphiaIDs[[1]]
-    
-    aphia_uncertain = theAphiaIDs[[2]][!is.na(theAphiaIDs[[2]]$CODE),]
-
-
-    #remove unnecessary spelling tips
-    if (nrow(aphia_known)>0){
-      aphia_known[which(aphia_known$SCI_COL_CLN==trimws(gsub(aphia_known$SUGG_SPELLING, pattern = "\\(SCIENTIFIC\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
-      aphia_known[which(aphia_known$COMM_COL_CLN==trimws(gsub(aphia_known$SUGG_SPELLING, pattern = "\\(COMMON\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
-    }
-    aphia_mystery = theAphiaIDs[[2]][is.na(theAphiaIDs[[2]]$CODE),]
-    if (nrow(aphia_mystery)>0) 
-      aphia_mystery[is.na(aphia_mystery$CODE),c("CODE_SVC","CODE_TYPE","CODE_SRC","SUGG_SPELLING")]<-NA
-    
-    cat(paste0("AphiaID checks completed in ",format(.POSIXct(difftime(Sys.time(), start_AphiaID, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = "getTaxaIDs.log", append = TRUE)
-    }
-  
-  if("TSN" %in% codes){
-    start_TSN = Sys.time()
-    cat(paste0("TSN checks starting\n"), file = "getTaxaIDs.log", append = TRUE)
-    if ("APHIAID" %in% codes) {
-      knownAphias <- theAphiaIDs[[1]][!is.na(theAphiaIDs[[1]]$CODE),]
-      if (nrow(knownAphias)<1)knownAphias <-NULL
-    }else{
-      knownAphias <-NULL
-    }
-    theTSNs <- getTSNs(mysteryTSN = mysteryTSN, 
-                       masterList = spec_list[,c("ID", "SCI_COL_CLN", "COMM_COL_CLN")], 
-                       knownAphias = knownAphias, 
-                       doSci=doSci, doComm=doComm)
-    tsn_known = theTSNs[[1]]
-    tsn_uncertain = theTSNs[[2]][!is.na(theTSNs[[2]]$CODE),]
-
-    #remove unnecessary spelling tips
- if (nrow(tsn_known)>0){
-    tsn_known[which(tsn_known$SCI_COL_CLN==trimws(gsub(tsn_known$SUGG_SPELLING, pattern = "\\(SCIENTIFIC\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
-    tsn_known[which(tsn_known$COMM_COL_CLN==trimws(gsub(tsn_known$SUGG_SPELLING, pattern = "\\(COMMON\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
- }
-    tsn_mystery = theTSNs[[2]][is.na(theTSNs[[2]]$CODE),]
-    if (nrow(tsn_mystery)>0) 
-      tsn_mystery[,c("CODE_SVC","CODE_TYPE","CODE_SRC","SUGG_SPELLING")]<-NA
-    cat(paste0("TSN checks completed in ",format(.POSIXct(difftime(Sys.time(), start_TSN, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = "getTaxaIDs.log", append = TRUE)
+  reviewSpelling <-function(df){
+    #this function just drops suggested spelling that match what we already have
+    if ("SCI_COL_CLN" %in% names(df) & nrow(df)>0)  df[which(df$SCI_COL_CLN==trimws(gsub(df$SUGG_SPELLING, pattern = "\\(SCIENTIFIC\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
+    if ("COMM_COL_CLN" %in% names(df) & nrow(df)>0) df[which(df$COMM_COL_CLN==trimws(gsub(df$SUGG_SPELLING, pattern = "\\(COMMON\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
+    return(df)
   }
   
-  if ("TSN" %in% codes & "APHIAID" %in% codes ){
+  if (!is.null(sci_col)){
+    spec_list$SCI_COL_CLN = NA
+    fields = c(fields, "SCI_COL_CLN")
+    doSci = T  
+  } else{
+    doSci = F
+  }
+  if (!is.null(comm_col)){
+    spec_list$COMM_COL_CLN = NA
+    fields = c(fields, "COMM_COL_CLN")
+    doComm = T  
+  } else{
+    doComm = F
+  }
+  
+  spec_list = cleanPrepareSpecList(spec_list, sci_col, comm_col, sci_Filts, comm_Filts)
+  cat(paste0("Input data successfully filtered\n"), file = logName, append = TRUE)
+  
+  definitive = spec_list[, fields]
+  
+  #add some columns to be populated later
+  cols = c("CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")
+  definitive = cbind(definitive, setNames( lapply(cols, function(x) x=NA), cols) )
+  definitive$CODE_DEFINITIVE = NA
+  
+  if ("SCI_COL_CLN" %in% names(spec_list) & "COMM_COL_CLN" %in% names(spec_list)){
+    #ensure that each record has at least one valid value
+    definitive = definitive[!is.na(definitive$SCI_COL_CLN) | !is.na(definitive$COMM_COL_CLN) ,]
+  } else if ("SCI_COL_CLN" %in% names(spec_list)){
+    definitive = definitive[!is.na(definitive$SCI_COL_CLN) ,]
+  } else if ("COMM_COL_CLN" %in% names(spec_list)){
+    definitive = definitive[!is.na(definitive$COMM_COL_CLN) ,]
+  } 
+  # 
+  # if ("TSN" %in% codes) {
+  #   #knownAPHIAID<-aphia_uncertain<-data.frame()
+  #   knownAPHIAID<-data.frame()
+  # }
+  # if ("APHIAID" %in% codes) {
+  #   mysteryAPHIAID<-definitive
+  #   knownTSN<-data.frame()
+  #   #knownTSN<-tsn_uncertain<-data.frame()
+  # }
+    mysteryAPHIAID<-mysteryTSN<-definitive
+    knownAPHIAID<-uncertainAPHIAID<-knownTSN<-uncertainTSN<-data.frame()
+  rm(definitive)
 
-    #this component tries to find aphiaids using any suggested spellings that 
-    #came from finding the TSN
-    dblCheck = rbind(aphia_uncertain,aphia_mystery)
-    if(nrow(dblCheck)>0){
-      dblCheck = dblCheck[dblCheck$ID %in% tsn_known[!is.na(tsn_known$SUGG_SPELLING) ,"ID"],]
-      if(nrow(dblCheck)>0){
-        correctors = tsn_known[tsn_known$ID %in% dblCheck$ID,c("ID","SUGG_SPELLING","CODE_SVC")]
-        if (nrow(correctors)>0){
-          start_spell = Sys.time()
-          cat(paste0("Reviewing discovered alternative spellings to see if anything new can be found\n"), file = "getTaxaIDs.log", append = TRUE)
-          cat(paste0("\tAphiaID re-checks initiated\n"), file = "getTaxaIDs.log", append = TRUE)
-          for(l in 1:nrow(correctors)){
-            cat(paste0("\t\tOriginal:\n"), file = "getTaxaIDs.log", append = TRUE)
-            this = correctors[l,]
-            if (grep(x = toupper(this$SUGG_SPELLING), pattern = " (SCIENTIFIC)",fixed = T )>0){
-                this$SCI_COL_CLN<-gsub(toupper(this$SUGG_SPELLING), pattern = " (SCIENTIFIC)", replacement = "", fixed = T)
-                cat(paste0("\t\tSci Name:",tsn_known[tsn_known$SUGG_SPELLING==this$SUGG_SPELLING,"SCI_COL_CLN"]," | Suggested Name: ",this$SCI_COL_CLN,"\n"), file = "getTaxaIDs.log", append = TRUE)
-              this$COMM_COL_CLN<-NA
-              this$SUGG_SPELLING<-NULL
-              cat(paste0("\t\t\ttaxize >  scientific names (new, suggested spellings)\n"), file = "getTaxaIDs.log", append = TRUE)
-              dblCheckTAX =   chk_taxize(this, searchtype = 'scientific')
-              cat(paste0("\t\t\tworrms >  scientific names (new, suggested spellings)\n"), file = "getTaxaIDs.log", append = TRUE)
-              dblCheckWORRMS =   chk_worrms(this, searchtype = 'scientific')
-            }else if (grep(x = toupper(this$SUGG_SPELLING), pattern = " (COMMON)",fixed = T )>0){
-              this$COMM_COL_CLN<-gsub(toupper(this$SUGG_SPELLING), pattern = " (COMMON)", replacement = "", fixed = T)
-              cat(paste0("\t\tCommon Name:",tsn_known[tsn_known$SUGG_SPELLING==this$SUGG_SPELLING,"COMM_COL_CLN"]," | Suggested Name: ",this$COMM_COL_CLN,"\n"), file = "getTaxaIDs.log", append = TRUE)
-              this$SCI_COL_CLN<-NA
-              this$SUGG_SPELLING<-NULL
-              cat(paste0("\t\t\ttaxize >  common names (new, suggested spellings)\n"), file = "getTaxaIDs.log", append = TRUE)
-              dblCheckTAX =   chk_taxize(this, searchtype = 'common')
-              cat(paste0("\t\t\tworrms >  common names (new, suggested spellings)\n"), file = "getTaxaIDs.log", append = TRUE)
-              dblCheckWORRMS =   chk_worrms(this, searchtype = 'common')
-            }else{
-              cat("??got a double check without an indication of common or sci??")
-            }
-          }
-          newres = rbind(dblCheckTAX,dblCheckWORRMS) 
-          newres=newres[newres$CODE_DEFINITIVE %in% TRUE,]
-          newres = merge(newres, correctors[,c("ID","CODE_SVC")], by = "ID")
-          newres[,"CODE_SRC"]<-paste0("scientific via (",newres$CODE_SVC.y,")")
-          newres$CODE_SVC.y<-NULL
-          colnames(newres)[colnames(newres) == 'CODE_SVC.x'] <- 'CODE_SVC'
-          defCheck = assignDefinitive(df = newres, masterList = spec_list[,c("ID", "SCI_COL_CLN", "COMM_COL_CLN"),])
-          newdefinitive= defCheck[[1]]
-          newAphia_mystery= defCheck[[2]]
-          if (!exists("aphia_known")){
-            aphia_known<-newdefinitive
-          }else{
-            aphia_known <- unique(rbind(aphia_known,newdefinitive))
-          }
-          aphia_mystery = rbind(aphia_mystery,newAphia_mystery)
-          aphia_mystery = aphia_mystery[!aphia_mystery$ID %in% aphia_known$ID,]
-          rm(defCheck)
-          rm(newdefinitive)
-          rm(newAphia_mystery)
-          cat(paste0("Alternative spelling review completed in",format(.POSIXct(difftime(Sys.time(), start_spell, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = "getTaxaIDs.log", append = TRUE)
+  if("APHIAID" %in% codes){
+    start_AphiaID = Sys.time()
+    cat(paste0("AphiaID checks starting\n"), file = logName, append = TRUE)
+    if (doSci) {
+      #TAXIZE - science
+      if (nrow(mysteryAPHIAID)>0){
+        tmp_sci_taxize = do_taxize(mysteryAPHIAID,"SCI_COL_CLN",logName,'scientific')
+        defCheck = assignDefinitive(df = tmp_sci_taxize, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryAPHIAID= defCheck[[2]]
+        if (!exists("definitiveAPHIAID")){
+          definitiveAPHIAID<-newdefinitive
+        }else{
+          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
+      }
+      #WORRMS - science
+      if (nrow(mysteryAPHIAID)>0){
+        tmp_sci_worrms = do_worrms(mysteryAPHIAID,"SCI_COL_CLN",logName,'scientific')
+        defCheck = assignDefinitive(df = tmp_sci_worrms, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryAPHIAID= defCheck[[2]]
+        if (!exists("definitiveAPHIAID")){
+          definitiveAPHIAID<-newdefinitive
+        }else{
+          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
+      }
+
+    }
+    if (doComm) {
+      #TAXIZE - common
+      if (nrow(mysteryAPHIAID)>0){
+        tmp_comm_taxize = do_taxize(mysteryAPHIAID,"COMM_COL_CLN",logName,'common')
+        defCheck = assignDefinitive(df = tmp_comm_taxize, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryAPHIAID= defCheck[[2]]
+        if (!exists("definitiveAPHIAID")){
+          definitiveAPHIAID<-newdefinitive
+        }else{
+          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
+      }
+      #WORRMS - common
+
+      if (nrow(mysteryAPHIAID)>0){
+        tmp_comm_worrms = do_worrms(mysteryAPHIAID,"COMM_COL_CLN",logName,'common')
+        defCheck = assignDefinitive(df = tmp_comm_worrms, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryAPHIAID= defCheck[[2]]
+        if (!exists("definitiveAPHIAID")){
+          definitiveAPHIAID<-newdefinitive
+        }else{
+          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
         }
       }
     }
+    cat(paste0("AphiaID checks completed in ",format(.POSIXct(difftime(Sys.time(), start_AphiaID, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
+    if(exists("definitiveAPHIAID")) definitiveAPHIAID<-reviewSpelling(definitiveAPHIAID)
+    mysteryAPHIAID<-reviewSpelling(mysteryAPHIAID)
+    #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
+    uncertainAPHIAID <- mysteryAPHIAID[is.na(mysteryAPHIAID$SUGG_SPELLING),] 
+    mysteryAPHIAID <- mysteryAPHIAID[!(mysteryAPHIAID$ID %in% uncertainAPHIAID$ID),]
+    mysteryAPHIAID<-rbind(uncertainAPHIAID,mysteryAPHIAID)
+    rm(uncertainAPHIAID)
+  }
+
+  if("TSN" %in% codes){
+    start_TSN = Sys.time()
+    cat(paste0("TSN checks starting\n"), file = logName, append = TRUE)
+    if ("APHIAID" %in% codes){
+      recs_aphiaid = unique(definitiveAPHIAID[!is.na(definitiveAPHIAID$CODE),])
+      aphiaTSNRes =   do_worrmsTSN(recs_aphiaid$CODE,recs_aphiaid, logName=logName)
+      #some field renaming below to prevent a warning
+      names(aphiaTSNRes)[names(aphiaTSNRes) == 'CODE'] <- 'TSN'
+      tsnFields = c(fields, "CODE")
+      aphiaTSNRes = merge(recs_aphiaid[,tsnFields],aphiaTSNRes, by.x = "CODE", by.y="APHIAID")
+      aphiaTSNRes$CODE<-NULL
+      names(aphiaTSNRes)[names(aphiaTSNRes) == 'TSN'] <- 'CODE'
+      defCheck = assignDefinitive(df = aphiaTSNRes, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+           newdefinitive= defCheck[[1]]
+           mysteryTSNFromAPHIAID= defCheck[[2]]
+           if (!exists("definitiveTSN")){
+             definitiveTSN<-newdefinitive
+           }else{
+             definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+           }
+           #this ensures that the mystery values include the ones that didn't get sent have an aphiaid
+           mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
+           mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% mysteryTSNFromAPHIAID$ID),]
+           mysteryTSN =  rbind(mysteryTSN, mysteryTSNFromAPHIAID)
+
+    }
+
+    if (doSci) {
+      # ritis - science
+      if (nrow(mysteryTSN)>0){
+        tmp_sci_ritis = do_ritis(mysteryTSN,"SCI_COL_CLN",logName,'scientific')
+        defCheck = assignDefinitive(df = tmp_sci_ritis, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryTSN= defCheck[[2]]
+        if (!exists("definitiveTSN")){
+          definitiveTSN<-newdefinitive
+        }else{
+          definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
+      }
+    }
+     if (doComm) {
+      #ritis - science
+      if (nrow(mysteryTSN)>0){
+        tmp_comm_ritis = do_ritis(mysteryTSN,"COMM_COL_CLN",logName,'common')
+        defCheck = assignDefinitive(df = tmp_comm_ritis, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
+        newdefinitive= defCheck[[1]]
+        mysteryTSN= defCheck[[2]]
+        if (!exists("definitiveTSN")){
+          definitiveTSN<-newdefinitive
+        }else{
+          definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
+      }
+    }
+    cat(paste0("TSN checks completed in ",format(.POSIXct(difftime(Sys.time(), start_TSN, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
+    if(exists("definitiveTSN")) definitiveTSN<-reviewSpelling(definitiveTSN)
+    mysteryTSN<-reviewSpelling(mysteryTSN)
+    #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
+    uncertainTSN <- mysteryTSN[is.na(mysteryTSN$SUGG_SPELLING),] 
+    mysteryTSN <- mysteryTSN[!(mysteryTSN$ID %in% uncertainTSN$ID),]
+    mysteryTSN<-rbind(uncertainTSN,mysteryTSN)
+    rm(uncertainTSN)
   }
   
+  #This was going to be an attempt to use suggested spellings from services to  
+  #re-initiate some of the checks.  I decided it's getting too automated and 
+  #it will likely increase false positives.  For example, "STONE" will find
+  #many valid values, like "STONEFLIES", "STONEFISH", etc, and it is difficult
+  #to automate their correct assignment.  For now, such results remain as 
+  #multi-results.
+  
+  # if (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$SUGG_SPELLING),])>0 |
+  #     nrow(mysteryTSN[!is.na(mysteryTSN$SUGG_SPELLING),])>0){
+  #   start_spell = Sys.time()
+  #   cat(paste0("Reviewing discovered alternative spellings to see if anything new can be found\n"), file = logName, append = TRUE)
+  #   spell_APHIAID <- mysteryAPHIAID[!is.na(mysteryAPHIAID$SUGG_SPELLING),]
+  #   if (nrow(spell_APHIAID)>0){
+  #     #browser()
+  #     # for (i in 1:nrow(spell_APHIAID)){
+  #     #   
+  #     # }
+  #   }
+  #   spell_TSN <- mysteryTSN[!is.na(mysteryTSN$SUGG_SPELLING),]
+  #   if (nrow(spell_TSN)>0){
+  #     cat("TSNs have some alternatives spellings to review")
+  #     #browser()
+  #     # for (i in 1:nrow(spell_TSN)){
+  #     #   
+  #     # }
+  #   }
+  #   cat(paste0("Alternative spelling review completed in",format(.POSIXct(difftime(Sys.time(), start_spell, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
+  # } 
+
   #join results back to original data
-  spec_list$SCI_COL_CLN<-NULL
-  spec_list$COMM_COL_CLN<-NULL
+  if (doSci) spec_list$SCI_COL_CLN<-NULL
+  if (doComm) spec_list$COMM_COL_CLN<-NULL
   
   spec_list_final = spec_list
   spec_list_final$APHIAID_MULTI_FLAG <-FALSE
   spec_list_final$TSN_MULTI_FLAG <-FALSE
-  # aphiaids_multi <- "none"
-  # tsns_multi <- "none"
   
   if ("APHIAID" %in% codes) {
-    aphiaids = rbind(aphia_known, aphia_uncertain, aphia_mystery)  
+
+    aphiaids = rbind(definitiveAPHIAID, mysteryAPHIAID)  
     if (nrow(aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),])>0){
       aphiaids_multi = aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),]
-      #aphiaids_multi$CODE_ID<-"APHIAID"
     }
     aphiaids = aphiaids[,c("ID","CODE", "CODE_SVC","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")]
     colnames(aphiaids)[colnames(aphiaids) == 'SUGG_SPELLING'] <- 'CODE_SPELLING'
@@ -337,10 +332,9 @@ In the event of failure, this file will reveal the last successful operation"))
   }
   
   if ("TSN" %in% codes) {
-    tsns = rbind(tsn_known, tsn_uncertain, tsn_mystery)
+    tsns = rbind(definitiveTSN, mysteryTSN)
     if (nrow(tsns[(duplicated(tsns$ID, fromLast = FALSE)|duplicated(tsns$ID, fromLast = TRUE)),])>0){
       tsn_multi = tsns[(duplicated(tsns$ID, fromLast = FALSE)|duplicated(tsns$ID, fromLast = TRUE)),]
-      #tsn_multi$CODE_ID<-"TSN"
     }
     tsns = tsns[,c("ID","CODE", "CODE_SVC","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")]
     colnames(tsns)[colnames(tsns) == 'SUGG_SPELLING'] <- 'CODE_SPELLING'
@@ -355,7 +349,7 @@ In the event of failure, this file will reveal the last successful operation"))
   
   
   spec_list_final$ID<-NULL
-  #spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+  spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
   
   if (exists("aphiaids_multi") & exists("tsn_multi")){
     # aphiaids_multiKEEP<<-aphiaids_multi
@@ -370,17 +364,17 @@ In the event of failure, this file will reveal the last successful operation"))
     multi_final="none"
   }
   if (class(multi_final) == 'data.frame'){
-    cat(paste0("Multiple codes were found for some species\n"), file = "getTaxaIDs.log", append = TRUE)
+    cat(paste0("Multiple codes were found for some species\n"), file = logName, append = TRUE)
     colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
     multi_final = merge(spec_list, multi_final[,-which(colnames(multi_final) %in% c("SCI_COL_CLN","COMM_COL_CLN"))], by="ID", all.y = T)
+    multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+    
     multi_final$ID<-NULL
-    #multi_final$SCI_COL_CLN<-NULL
-    #multi_final$COMM_COL_CLN<-NULL
   }
   
   res = list(spec_list_final, multi_final)
-  cat(paste0("Completed in ",format(.POSIXct(difftime(Sys.time(), start, units="secs"),tz="GMT")),"\n"), file = "getTaxaIDs.log", append = TRUE)
-  cat("####################################################\n", file = "getTaxaIDs.log", append = TRUE)
+  cat(paste0("Completed in ",format(.POSIXct(difftime(Sys.time(), start, units="secs"),tz="GMT")),"\n"), file = logName, append = TRUE)
+  cat("####################################################\n", file = logName, append = TRUE)
   cat("Done")
   return(res)
 }

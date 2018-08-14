@@ -13,16 +13,19 @@
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
 assignDefinitive <- function(df = NULL, masterList = NULL){
+  fields = names(masterList)
   unknown = df[!(df$CODE_DEFINITIVE %in% TRUE), ]
-  known = merge(masterList[masterList$ID %in% df[df$CODE_DEFINITIVE %in% TRUE,"ID"],c("ID", "SCI_COL_CLN", "COMM_COL_CLN")],
+  known = merge(masterList[masterList$ID %in% df[df$CODE_DEFINITIVE %in% TRUE,"ID"],fields],
                 df[df$CODE_DEFINITIVE %in% TRUE,c("ID","CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")], by.x = "ID", by.y = "ID", all.x=T)
   
-  unknown = merge(masterList, unknown[, c("ID","CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")], by.x = "ID", by.y = "ID", all.y=T)   
+  unknown = merge(masterList, unknown[, c("ID","CODE","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")], by.x = "ID", by.y = "ID", all.y=T) 
+  unknown = unique(unknown)
   #remove known values from mystery
   unknown = unknown[!(paste0(unknown$ID,unknown$CODE_TYPE) %in% paste0(known$ID, known$CODE_TYPE)),]
   #remove duplicates
   probs = unique(unknown[,c("CODE","ID","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")])
   if (nrow(probs) < nrow(unknown)){
+    browser()
     unknownAgg = aggregate(by=unknown[c("CODE","ID","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")], x = unknown[c("CODE_SVC")], paste, collapse = ",")
     unknownAgg = merge(masterList,unknownAgg, all.y = T)
     unknownFinal = unique(rbind(unknownAgg,unknown[!(unknown$ID %in% unknownAgg$ID),]))

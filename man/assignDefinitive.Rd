@@ -22,11 +22,10 @@ all of the contributing services will be captured (e.g. this code was the
 result of taxize AND worrms)
 }
 \seealso{
-Other speciesCodes: \code{\link{chk_ritis}},
-  \code{\link{chk_taxize}}, \code{\link{chk_worrmsTSN}},
-  \code{\link{chk_worrms}}, \code{\link{getAphiaIDs}},
-  \code{\link{getTSNs}}, \code{\link{getTaxaIDs}},
-  \code{\link{skipUselessRecs}}
+Other speciesCodes: \code{\link{cleanPrepareSpecList}},
+  \code{\link{do_ritis}}, \code{\link{do_taxize}},
+  \code{\link{do_worrmsTSN}}, \code{\link{do_worrms}},
+  \code{\link{getTaxaIDs}}
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}

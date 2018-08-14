@@ -1,15 +1,19 @@
-#' @title chk_worrmsTSN
+#' @title do_worrmsTSN
 #' @description This function sends APHIAIDs to worrms to see if it can find a 
 #' corresponding TSN
 #' @param recs - vector of taxa names for which we already have an APHIAID
 #' @param knownAphias - dataframe of taxas for which we have the AphiaIDs and a
 #' field called "SCI_COL_CLN" containing and identifying name for the taxa. 
+#' @param logName - this is the name of the logfile in the working directory 
+#' that progress should be appended to.
 #' @importFrom worrms wm_external
 #' @importFrom utils winProgressBar
 #' @importFrom utils setWinProgressBar
 #' @family speciesCodes
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
-chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
+do_worrmsTSN <-function(recs = NULL, 
+                         knownAphias=NULL,
+                         logName = logName){
   total <- length(recs)
   pb <- winProgressBar(title = paste0("TSN>WORRMS: via discovered APHIAIDs"), label=recs[1], min = 0, max = total, width = 300)
   
@@ -28,7 +32,7 @@ chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
 
   for (i in 1:total) {
     knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]
-    cat(paste0("\t\t",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = "getTaxaIDs.log", append = TRUE)
+    cat(paste0("\t\tworrms>APHIAID>",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
@@ -46,6 +50,7 @@ chk_worrmsTSN <-function(recs = NULL, knownAphias=NULL){
                        CODE_DEFINITIVE = FALSE,
                        SUGG_SPELLING = NA)
     }else{
+      
       thisrec = data.frame(joincol = trimws(toupper(recs[i])),
                         CODE = this,   
                         CODE_SVC = 'WORRMS',

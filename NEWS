@@ -1,6 +1,8 @@
 Mar.odissupport 
 ==============
 Changes
+2018.08.14
+* Many issues fixed - very much a new versions
 2018.07.16
 * fixed issue where non-unique values were being sent to webservices
 2018.06.15

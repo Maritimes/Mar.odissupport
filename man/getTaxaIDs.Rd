@@ -5,7 +5,8 @@
 \title{getTaxaIDs}
 \usage{
 getTaxaIDs(spec_list = NULL, sci_col = NULL, comm_col = NULL,
-  sci_Filts = NULL, comm_Filts = NULL, codes = c("APHIAID", "TSN"))
+  sci_Filts = NULL, comm_Filts = NULL, codes = c("APHIAID", "TSN"),
+  debug = F)
 }
 \arguments{
 \item{spec_list}{the dataframe containing information to be decoded to TSN and
@@ -42,6 +43,9 @@ and \code{comm_col}:
 
 \item{codes}{These are the codes you would like to determine.  \code{TSN} and
 \code{APHIAID} are the only valid entries.}
+
+\item{debug}{default is \code{FALSE}  This just ensure that the log file is 
+overwritten rather than making many new ones.}
 }
 \description{
 This function attempts to determine a definitive AphiaID and TSN
@@ -87,10 +91,9 @@ will include:
 }
 \seealso{
 Other speciesCodes: \code{\link{assignDefinitive}},
-  \code{\link{chk_ritis}}, \code{\link{chk_taxize}},
-  \code{\link{chk_worrmsTSN}}, \code{\link{chk_worrms}},
-  \code{\link{getAphiaIDs}}, \code{\link{getTSNs}},
-  \code{\link{skipUselessRecs}}
+  \code{\link{cleanPrepareSpecList}},
+  \code{\link{do_ritis}}, \code{\link{do_taxize}},
+  \code{\link{do_worrmsTSN}}, \code{\link{do_worrms}}
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}
