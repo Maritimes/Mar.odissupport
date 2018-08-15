@@ -25,7 +25,6 @@ assignDefinitive <- function(df = NULL, masterList = NULL){
   #remove duplicates
   probs = unique(unknown[,c("CODE","ID","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")])
   if (nrow(probs) < nrow(unknown)){
-    browser()
     unknownAgg = aggregate(by=unknown[c("CODE","ID","CODE_TYPE","CODE_DEFINITIVE","CODE_SRC","SUGG_SPELLING")], x = unknown[c("CODE_SVC")], paste, collapse = ",")
     unknownAgg = merge(masterList,unknownAgg, all.y = T)
     unknownFinal = unique(rbind(unknownAgg,unknown[!(unknown$ID %in% unknownAgg$ID),]))

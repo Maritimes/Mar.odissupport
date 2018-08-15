@@ -90,12 +90,7 @@ getTaxaIDs <- function(spec_list = NULL,
   cat(paste0("A log file has been generated at ",file.path(getwd(),logName),"\nIn the event of failure, this file will reveal the last successful operation\n"))
   fields = c("ID")
   
-  reviewSpelling <-function(df){
-    #this function just drops suggested spelling that match what we already have
-    if ("SCI_COL_CLN" %in% names(df) & nrow(df)>0)  df[which(df$SCI_COL_CLN==trimws(gsub(df$SUGG_SPELLING, pattern = "\\(SCIENTIFIC\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
-    if ("COMM_COL_CLN" %in% names(df) & nrow(df)>0) df[which(df$COMM_COL_CLN==trimws(gsub(df$SUGG_SPELLING, pattern = "\\(COMMON\\)", replacement = ""))),"SUGG_SPELLING"]<-NA
-    return(df)
-  }
+  
   
   if (!is.null(sci_col)){
     spec_list$SCI_COL_CLN = NA
@@ -130,150 +125,81 @@ getTaxaIDs <- function(spec_list = NULL,
   } else if ("COMM_COL_CLN" %in% names(spec_list)){
     definitive = definitive[!is.na(definitive$COMM_COL_CLN) ,]
   } 
-  # 
-  # if ("TSN" %in% codes) {
-  #   #knownAPHIAID<-aphia_uncertain<-data.frame()
-  #   knownAPHIAID<-data.frame()
-  # }
-  # if ("APHIAID" %in% codes) {
-  #   mysteryAPHIAID<-definitive
-  #   knownTSN<-data.frame()
-  #   #knownTSN<-tsn_uncertain<-data.frame()
-  # }
-    mysteryAPHIAID<-mysteryTSN<-definitive
-    knownAPHIAID<-uncertainAPHIAID<-knownTSN<-uncertainTSN<-data.frame()
+  mysteryAPHIAID<-mysteryTSN<-definitive
+  knownAPHIAID<-uncertainAPHIAID<-knownTSN<-uncertainTSN<-data.frame()
   rm(definitive)
-
-  if("APHIAID" %in% codes){
-    start_AphiaID = Sys.time()
-    cat(paste0("AphiaID checks starting\n"), file = logName, append = TRUE)
-    if (doSci) {
-      #TAXIZE - science
-      if (nrow(mysteryAPHIAID)>0){
-        tmp_sci_taxize = do_taxize(mysteryAPHIAID,"SCI_COL_CLN",logName,'scientific')
-        defCheck = assignDefinitive(df = tmp_sci_taxize, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryAPHIAID= defCheck[[2]]
-        if (!exists("definitiveAPHIAID")){
-          definitiveAPHIAID<-newdefinitive
-        }else{
-          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-      #WORRMS - science
-      if (nrow(mysteryAPHIAID)>0){
-        tmp_sci_worrms = do_worrms(mysteryAPHIAID,"SCI_COL_CLN",logName,'scientific')
-        defCheck = assignDefinitive(df = tmp_sci_worrms, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryAPHIAID= defCheck[[2]]
-        if (!exists("definitiveAPHIAID")){
-          definitiveAPHIAID<-newdefinitive
-        }else{
-          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-
-    }
-    if (doComm) {
-      #TAXIZE - common
-      if (nrow(mysteryAPHIAID)>0){
-        tmp_comm_taxize = do_taxize(mysteryAPHIAID,"COMM_COL_CLN",logName,'common')
-        defCheck = assignDefinitive(df = tmp_comm_taxize, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryAPHIAID= defCheck[[2]]
-        if (!exists("definitiveAPHIAID")){
-          definitiveAPHIAID<-newdefinitive
-        }else{
-          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-      #WORRMS - common
-
-      if (nrow(mysteryAPHIAID)>0){
-        tmp_comm_worrms = do_worrms(mysteryAPHIAID,"COMM_COL_CLN",logName,'common')
-        defCheck = assignDefinitive(df = tmp_comm_worrms, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryAPHIAID= defCheck[[2]]
-        if (!exists("definitiveAPHIAID")){
-          definitiveAPHIAID<-newdefinitive
-        }else{
-          definitiveAPHIAID <- unique(rbind(definitiveAPHIAID[definitiveAPHIAID$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-    }
-    cat(paste0("AphiaID checks completed in ",format(.POSIXct(difftime(Sys.time(), start_AphiaID, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
-    if(exists("definitiveAPHIAID")) definitiveAPHIAID<-reviewSpelling(definitiveAPHIAID)
-    mysteryAPHIAID<-reviewSpelling(mysteryAPHIAID)
-    #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
-    uncertainAPHIAID <- mysteryAPHIAID[is.na(mysteryAPHIAID$SUGG_SPELLING),] 
-    mysteryAPHIAID <- mysteryAPHIAID[!(mysteryAPHIAID$ID %in% uncertainAPHIAID$ID),]
-    mysteryAPHIAID<-rbind(uncertainAPHIAID,mysteryAPHIAID)
-    rm(uncertainAPHIAID)
+  
+  #approach -- Scientific names are the most likely source of a definitive match
+  #so we look for them first (for both AphiaIDs and TSNs)
+  # Check scientific names for AphiaIDs using taxize, then worrms
+  # if TSNs have been requested, use the aphiaids to look for them
+  
+  TSNs_checked = c()
+  APHIAIDs_checked = c()
+  
+  if(doSci & "APHIAID" %in% codes) {
+    APHIAID_SCI =   getCodes(mysteryAPHIAID, definitiveAPHIAID = NULL, APHIAIDs_checked, mysteryTSN, definitiveTSN = NULL, TSNs_checked, "scientific", "APHIAID", codes, spec_list, logName)
+    definitiveAPHIAID = APHIAID_SCI[[2]]
+    definitiveTSN = APHIAID_SCI[[4]]
+    mysteryAPHIAID = APHIAID_SCI[[1]]
+    mysteryTSN = APHIAID_SCI[[3]]
+    APHIAIDs_checked = APHIAID_SCI[[5]]
+    TSNs_checked = APHIAID_SCI[[6]]
+    mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
+    mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
+    # print(mysteryAPHIAID)
+    # print(definitiveAPHIAID)
+     #print(mysteryTSN)
+     #print(definitiveTSN)
+    #print("####")
   }
-
-  if("TSN" %in% codes){
-    start_TSN = Sys.time()
-    cat(paste0("TSN checks starting\n"), file = logName, append = TRUE)
-    if ("APHIAID" %in% codes){
-      recs_aphiaid = unique(definitiveAPHIAID[!is.na(definitiveAPHIAID$CODE),])
-      aphiaTSNRes =   do_worrmsTSN(recs_aphiaid$CODE,recs_aphiaid, logName=logName)
-      #some field renaming below to prevent a warning
-      names(aphiaTSNRes)[names(aphiaTSNRes) == 'CODE'] <- 'TSN'
-      tsnFields = c(fields, "CODE")
-      aphiaTSNRes = merge(recs_aphiaid[,tsnFields],aphiaTSNRes, by.x = "CODE", by.y="APHIAID")
-      aphiaTSNRes$CODE<-NULL
-      names(aphiaTSNRes)[names(aphiaTSNRes) == 'TSN'] <- 'CODE'
-      defCheck = assignDefinitive(df = aphiaTSNRes, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-           newdefinitive= defCheck[[1]]
-           mysteryTSNFromAPHIAID= defCheck[[2]]
-           if (!exists("definitiveTSN")){
-             definitiveTSN<-newdefinitive
-           }else{
-             definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-           }
-           #this ensures that the mystery values include the ones that didn't get sent have an aphiaid
-           mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
-           mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% mysteryTSNFromAPHIAID$ID),]
-           mysteryTSN =  rbind(mysteryTSN, mysteryTSNFromAPHIAID)
-
-    }
-
-    if (doSci) {
-      # ritis - science
-      if (nrow(mysteryTSN)>0){
-        tmp_sci_ritis = do_ritis(mysteryTSN,"SCI_COL_CLN",logName,'scientific')
-        defCheck = assignDefinitive(df = tmp_sci_ritis, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryTSN= defCheck[[2]]
-        if (!exists("definitiveTSN")){
-          definitiveTSN<-newdefinitive
-        }else{
-          definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-    }
-     if (doComm) {
-      #ritis - science
-      if (nrow(mysteryTSN)>0){
-        tmp_comm_ritis = do_ritis(mysteryTSN,"COMM_COL_CLN",logName,'common')
-        defCheck = assignDefinitive(df = tmp_comm_ritis, masterList = spec_list[,names(spec_list) %in% c("ID","SCI_COL_CLN","COMM_COL_CLN")])
-        newdefinitive= defCheck[[1]]
-        mysteryTSN= defCheck[[2]]
-        if (!exists("definitiveTSN")){
-          definitiveTSN<-newdefinitive
-        }else{
-          definitiveTSN <- unique(rbind(definitiveTSN[definitiveTSN$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
-        }
-      }
-    }
-    cat(paste0("TSN checks completed in ",format(.POSIXct(difftime(Sys.time(), start_TSN, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
-    if(exists("definitiveTSN")) definitiveTSN<-reviewSpelling(definitiveTSN)
-    mysteryTSN<-reviewSpelling(mysteryTSN)
-    #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
-    uncertainTSN <- mysteryTSN[is.na(mysteryTSN$SUGG_SPELLING),] 
-    mysteryTSN <- mysteryTSN[!(mysteryTSN$ID %in% uncertainTSN$ID),]
-    mysteryTSN<-rbind(uncertainTSN,mysteryTSN)
-    rm(uncertainTSN)
+  if(doSci & "TSN" %in% codes){
+    TSN_SCI =           getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "scientific", "TSN", codes, spec_list, logName)
+    definitiveAPHIAID = TSN_SCI[[2]]
+    definitiveTSN = TSN_SCI[[4]]
+    mysteryAPHIAID = TSN_SCI[[1]]
+    mysteryTSN = TSN_SCI[[3]]
+    APHIAIDs_checked = TSN_SCI[[5]]
+    TSNs_checked = TSN_SCI[[6]]
+    mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
+    mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
+    # print(mysteryAPHIAID)
+    # print(definitiveAPHIAID)
+     #print(mysteryTSN)
+     #print(definitiveTSN)
+    #print("####")
+  }
+  if(doComm & "APHIAID" %in% codes) {
+    APHIAID_COMM = getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "APHIAID", codes, spec_list, logName)
+    definitiveAPHIAID = APHIAID_COMM[[2]]
+    definitiveTSN = APHIAID_COMM[[4]]
+    mysteryAPHIAID = APHIAID_COMM[[1]]
+    mysteryTSN = APHIAID_COMM[[3]]
+    APHIAIDs_checked = APHIAID_COMM[[5]]
+    TSNs_checked = APHIAID_COMM[[6]]
+    mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
+    mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
+    # print(mysteryAPHIAID)
+    # print(definitiveAPHIAID)
+    #print(mysteryTSN)
+     #print(definitiveTSN)
+    #print("####")
+  }
+  if(doComm & "TSN" %in% codes) {
+    TSN_COMM =         getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "TSN", codes, spec_list, logName)
+    definitiveAPHIAID = TSN_COMM[[2]]
+    definitiveTSN = TSN_COMM[[4]]
+    mysteryAPHIAID = TSN_COMM[[1]]
+    mysteryTSN = TSN_COMM[[3]]
+    APHIAIDs_checked = TSN_COMM[[5]]
+    TSNs_checked = TSN_COMM[[6]]
+    mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
+    mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
+    # print(mysteryAPHIAID)
+    # print(definitiveAPHIAID)
+     #print(mysteryTSN)
+     #print(definitiveTSN)
+    #print("####")
   }
   
   #This was going to be an attempt to use suggested spellings from services to  
@@ -304,7 +230,7 @@ getTaxaIDs <- function(spec_list = NULL,
   #   }
   #   cat(paste0("Alternative spelling review completed in",format(.POSIXct(difftime(Sys.time(), start_spell, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
   # } 
-
+  
   #join results back to original data
   if (doSci) spec_list$SCI_COL_CLN<-NULL
   if (doComm) spec_list$COMM_COL_CLN<-NULL
@@ -314,7 +240,7 @@ getTaxaIDs <- function(spec_list = NULL,
   spec_list_final$TSN_MULTI_FLAG <-FALSE
   
   if ("APHIAID" %in% codes) {
-
+    
     aphiaids = rbind(definitiveAPHIAID, mysteryAPHIAID)  
     if (nrow(aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),])>0){
       aphiaids_multi = aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),]

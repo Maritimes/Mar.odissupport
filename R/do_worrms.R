@@ -53,10 +53,10 @@ do_worrms<-function(df = NULL,
       })
     }
     if (is.null(this)){
-      cat(paste0(" - Nothing found\n"), file = logName, append = TRUE)
+      cat(paste0(" - NA\n"), file = logName, append = TRUE)
       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else{
-      cat(paste0(" - Results found\n"), file = logName, append = TRUE)
+      cat(paste0(" - Results\n"), file = logName, append = TRUE)
       tmp=data.frame(this)
       tmp = tmp[,c("status","valid_AphiaID","valid_name","scientificname")]
       thisrec = data.frame(status=tmp$status,
@@ -100,5 +100,6 @@ do_worrms<-function(df = NULL,
     }
     results = rbind(results,thisrec)
   }
+  close(pb)
   return(results)
 }

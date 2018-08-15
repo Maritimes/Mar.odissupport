@@ -62,11 +62,11 @@ do_ritis<-function(df = NULL,
     potents$accepted_names<-NULL
     return(potents)
   }
-  if (searchtype=="scientific"){
-    cat(paste0("\tritis > scientific names\n"), file = logName, append = TRUE)
-  }else  if (searchtype=="common"){
-    cat(paste0("\tritis > common names\n"), file = logName, append = TRUE)
-  }
+  # if (searchtype=="scientific"){
+  #   cat(paste0("\tritis > scientific names\n"), file = logName, append = TRUE)
+  # }else  if (searchtype=="common"){
+  #   cat(paste0("\tritis > common names\n"), file = logName, append = TRUE)
+  # }
   u_df = data.frame(u_rec =unique(df[!is.na(df[chkField]),chkField]),
                     ritisname=NA,
                     CODE = NA)
@@ -94,13 +94,13 @@ do_ritis<-function(df = NULL,
       })
     }
     if (is.null(this)){
-      cat(paste0("- Nothing found\n"), file = logName, append = TRUE)
+      cat(paste0("- NA\n"), file = logName, append = TRUE)
       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else if (nrow(this)==0){
-      cat(paste0("- Nothing found\n"), file = logName, append = TRUE)
+      cat(paste0("- NA\n"), file = logName, append = TRUE)
       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else{
-      cat(paste0("- Results found\n"), file = logName, append = TRUE)
+      cat(paste0("- Found\n"), file = logName, append = TRUE)
       tmp=unique(data.frame(this))
       #format results so they look the same regardless of searchtype
       if (searchtype=="scientific"){
@@ -114,7 +114,7 @@ do_ritis<-function(df = NULL,
       thisrec = data.frame(u_rec =u_df[i,"u_rec"],
                            CODE = tmp$tsn,
                            CODE_SRC = searchtype,
-                           CODE_SVC = 'ritis',
+                           CODE_SVC = 'RITIS',
                            CODE_TYPE = 'TSN',
                            CODE_DEFINITIVE = FALSE,
                            SUGG_SPELLING = trimws(toupper(tmp$ritisname)))
@@ -137,5 +137,6 @@ do_ritis<-function(df = NULL,
     }
     results = rbind(results,thisrec)
   }
+  close(pb)
   return(results)
 }

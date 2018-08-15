@@ -50,10 +50,10 @@ do_taxize<-function(df = NULL,
     error = function(cond) {
     })
     if (is.null(this)){
-      cat(paste0("- Nothing found\n"), file = logName, append = TRUE)
+      cat(paste0("- NA\n"), file = logName, append = TRUE)
       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else{
-      cat(paste0("- Results found\n"), file = logName, append = TRUE)
+      cat(paste0("- Results\n"), file = logName, append = TRUE)
       tmp=data.frame(this)
       tmp = tmp[,c("ids","match","multiple_matches","pattern_match")]
       thisrec = data.frame(match=tmp$match,
@@ -79,5 +79,6 @@ do_taxize<-function(df = NULL,
     }
     results = rbind(results,thisrec)
   }
+  close(pb)
   return(results)
 }

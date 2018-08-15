@@ -25,8 +25,9 @@ species off to ritis
 \seealso{
 Other speciesCodes: \code{\link{assignDefinitive}},
   \code{\link{cleanPrepareSpecList}},
-  \code{\link{do_taxize}}, \code{\link{do_worrmsTSN}},
-  \code{\link{do_worrms}}, \code{\link{getTaxaIDs}}
+  \code{\link{do_taxize}}, \code{\link{do_worrmsAphiaID}},
+  \code{\link{do_worrmsTSN}}, \code{\link{do_worrms}},
+  \code{\link{getTaxaIDs}}
 }
 \author{
 Mike McMahon, \email{Mike.McMahon@dfo-mpo.gc.ca}

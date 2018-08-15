@@ -28,6 +28,7 @@ common issues with field names
 \seealso{
 Other speciesCodes: \code{\link{assignDefinitive}},
   \code{\link{do_ritis}}, \code{\link{do_taxize}},
+  \code{\link{do_worrmsAphiaID}},
   \code{\link{do_worrmsTSN}}, \code{\link{do_worrms}},
   \code{\link{getTaxaIDs}}
 }
