@@ -87,7 +87,6 @@ getCodes <- function(mysteryAPHIAID = NULL,
         dfDefinitive <- unique(rbind(dfDefinitive[dfDefinitive$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
       }
     }
-    cat(paste0(desc, " checks completed in ",format(.POSIXct(difftime(Sys.time(), start_Timer, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
   }else if (thisCode=="TSN"){
     #ritis
     if (nrow(dfMystery)>0){
@@ -101,7 +100,6 @@ getCodes <- function(mysteryAPHIAID = NULL,
       }else{
         dfDefinitive <- unique(rbind(dfDefinitive[dfDefinitive$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
       }
-      cat(paste0(desc, " checks completed in ",format(.POSIXct(difftime(Sys.time(), start_Timer, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
     }
   }
   #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
@@ -119,7 +117,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
       recs_W_codeT = recs_W_codeT[!(recs_W_codeT$CODE %in% TSNs_checked),]
       if (nrow(recs_W_codeT)>0){
         start_APHIAIDTSN = Sys.time()
-        cat(paste0("AphiaID (via ",thisCode,") checks starting\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tUsing found ",thisCode,"s to search for AphiaID\n"), file = logName, append = TRUE)
         code_APHIAIDRes =   do_worrmsAphiaID(recs_W_codeT$CODE,recs_W_codeT, logName=logName)
         #some field renaming below to prevent a warning
         names(code_APHIAIDRes)[names(code_APHIAIDRes) == 'CODE'] <- 'APHIAID'
@@ -136,7 +134,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
         dfMysteryOther = dfMysteryOther[!(dfMysteryOther$ID %in% dfDefinitiveOther$ID),]
         dfMysteryOther = dfMysteryOther[!(dfMysteryOther$ID %in% mysteryOtherFromCode$ID),]
         dfMysteryOther =  rbind(dfMysteryOther, mysteryOtherFromCode)
-          
+        
         #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
         dfDefinitiveOther<-reviewSpelling(dfDefinitiveOther)
         dfMysteryOther<-reviewSpelling(dfMysteryOther)
@@ -145,10 +143,10 @@ getCodes <- function(mysteryAPHIAID = NULL,
         dfMysteryOther<-rbind(uncertainOther,dfMysteryOther)
         rm(uncertainOther)
         TSNs_checked = c(TSNs_checked, recs_W_codeT$CODE)
-        cat(paste0("AphiaID (via TSN) checks completed in ",format(.POSIXct(difftime(Sys.time(), start_APHIAIDTSN, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tAphiaID (via TSN) checks completed in ",format(.POSIXct(difftime(Sys.time(), start_APHIAIDTSN, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
       }    
     }
-   }
+  }
   
   if("TSN" %in% codes & thisCode !="TSN"){
     if("APHIAID" %in% codes){
@@ -157,7 +155,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
       recs_W_codeA = recs_W_codeA[!(recs_W_codeA$CODE %in% APHIAIDs_checked),]
       if (nrow(recs_W_codeA)>0){
         start_TSNAPHIAID = Sys.time()
-        cat(paste0("TSN (via ",thisCode,") checks starting\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tUsing found ",thisCode,"s to search for TSNs\n"), file = logName, append = TRUE)
         code_TSNRes = do_worrmsTSN(recs_W_codeA$CODE,recs_W_codeA, logName=logName)
         #some field renaming below to prevent a warning
         names(code_TSNRes)[names(code_TSNRes) == 'CODE'] <- 'TSN'
@@ -174,7 +172,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
         dfMysteryOther = dfMysteryOther[!(dfMysteryOther$ID %in% dfDefinitiveOther$ID),]
         dfMysteryOther = dfMysteryOther[!(dfMysteryOther$ID %in% mysteryOtherFromCode$ID),]
         dfMysteryOther =  rbind(dfMysteryOther, mysteryOtherFromCode)
-         
+        
         #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
         dfDefinitiveOther<-reviewSpelling(dfDefinitiveOther)
         dfMysteryOther<-reviewSpelling(dfMysteryOther)
@@ -183,7 +181,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
         dfMysteryOther<-rbind(uncertainOther,dfMysteryOther)
         rm(uncertainOther) 
         APHIAIDs_checked =  c(APHIAIDs_checked, recs_W_codeA$CODE)
-        cat(paste0("TSN (via ",thisCode,") checks completed in ",format(.POSIXct(difftime(Sys.time(), start_TSNAPHIAID, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tTSN (via ",thisCode,") checks completed in ",format(.POSIXct(difftime(Sys.time(), start_TSNAPHIAID, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
       }
     }
   }
@@ -201,6 +199,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
   }
   
   
+  cat(paste0(desc, " checks completed in ",format(.POSIXct(difftime(Sys.time(), start_Timer, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
   res = list(mysteryAPHIAID, definitiveAPHIAID, mysteryTSN, definitiveTSN, APHIAIDs_checked, TSNs_checked)
   return(res)
 }

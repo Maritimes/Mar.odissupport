@@ -54,14 +54,18 @@ taxize and ritis.
 
 It takes a species list with Scientific and Common names and performs checks
 in the following order:
+
 \enumerate{
-  \item Taxize (for AphiaID): Scientific name
-  \item Worrms (for AphiaID): Scientific name
-  \item Taxize (for AphiaID): Common name
-  \item Worrms (for AphiaID): Common name
-  \item Worrms (for TSN): <previously found> AphiaIDs
-  \item Ritis (for TSN): Scientific name
-  \item Ritis (for TSN): Common name
+  \item Check scientific names for AphiaIDs using taxize, then worrms
+  \item Check scientific names for missing AphiaIDs using worrms
+  \item Use found AphiaIDs to look for the TSNs
+  \item Check scientific names for missing TSNs using ritis
+  \item Use found TSNs to look for the AphiaIDs
+  \item Check common names for missing AphiaIDs using taxize, then worrms
+  \item Check common names for missing AphiaIDs using worrms
+  \item Use found AphiaIDs to look for the missing TSNs
+  \item Check common names for missing TSNs using ritis
+  \item Use found TSNs to look for the missing AphiaIDs
   }
   
 In addition to all of the original fields, the returned data
@@ -87,6 +91,8 @@ will include:
   or that the matches were recognized as authoritative by the service
   \item TSN_SPELLING - alternative spellings suggested for the 
   TSN_SRC suggested by the service that found the TSN
+  \item ID_SRC - populated with the version of this script that was used to 
+  find a match
   }
 }
 \seealso{

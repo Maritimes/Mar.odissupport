@@ -20,7 +20,8 @@ be used checking the services}
 }
 \description{
 This function sends either the scientific or common name of each
-species off to taxize
+species off to taxize - ids that are returned are then sent to worrms for 
+verification and alternative sp[elling suggestions]
 }
 \seealso{
 Other speciesCodes: \code{\link{assignDefinitive}},

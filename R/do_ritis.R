@@ -36,6 +36,19 @@ do_ritis<-function(df = NULL,
     }  
     
     if (nrow(potents[potents$taxonUsageRating =="valid",])>0)potents = potents[potents$taxonUsageRating =="valid",]
+    for (k in 1:nrow(potents)){
+      thisDefCheck2 <- tryCatch({
+        data.frame(ritis::accepted_names(potents[k,"CODE"]))
+      },
+      error = function(cond) {
+      })
+      if (!is.null(thisDefCheck2)& nrow(thisDefCheck2)>0){
+        potents[k,"SUGG_SPELLING"]<-trimws(toupper(thisDefCheck2$acceptedName))
+        potents[k,"CODE"]<-thisDefCheck2$acceptedTsn
+        if (nrow(thisDefCheck2)>1)browser()
+      }
+    }
+    
     if (nrow(potents)==1){
       potents$CODE_DEFINITIVE<-TRUE
       potents$taxonUsageRating<-NULL
@@ -45,28 +58,16 @@ do_ritis<-function(df = NULL,
     invalid_potents <- potents[!(potents$taxonUsageRating %in% "valid"),  ]
     if (nrow(invalid_potents)>0)cat(paste0("opportunity to further limit tsns\n"), file = logName, append = TRUE)
     
-    # for (k in 1:nrow(potents)){
-    #   thisDefCheck2 <- tryCatch({
-    #     data.frame(ritis::accepted_names(potents[k,"CODE"]))
-    #   },
-    #   error = function(cond) {
-    #   })
-    #   if (!is.null(thisDefCheck2) & nrow(thisDefCheck2)>0){
-    #     browser()
-    #     potents[k,"accepted_names"]<-thisDefCheck$accepted_names
-    #     if (nrow(thisDefCheck2)>1)browser()
-    #   }
-    # }
     #use taxonusageRating to help
     potents$taxonUsageRating<-NULL
     potents$accepted_names<-NULL
     return(potents)
   }
-  # if (searchtype=="scientific"){
-  #   cat(paste0("\tritis > scientific names\n"), file = logName, append = TRUE)
-  # }else  if (searchtype=="common"){
-  #   cat(paste0("\tritis > common names\n"), file = logName, append = TRUE)
-  # }
+  if (searchtype=="scientific"){
+    cat(paste0("\tritis > scientific names\n"), file = logName, append = TRUE)
+  }else  if (searchtype=="common"){
+    cat(paste0("\tritis > common names\n"), file = logName, append = TRUE)
+  }
   u_df = data.frame(u_rec =unique(df[!is.na(df[chkField]),chkField]),
                     ritisname=NA,
                     CODE = NA)
@@ -124,15 +125,11 @@ do_ritis<-function(df = NULL,
       if (nrow(thisrec[sapply(strsplit(thisrec$SUGG_SPELLING, " "), length) ==sapply(strsplit(u_df[i,"u_rec"], " "), length), ])>0){
         thisrec = thisrec[sapply(strsplit(thisrec$SUGG_SPELLING, " "), length) ==sapply(strsplit(u_df[i,"u_rec"], " "), length), ]  
       }  
-      if (searchtype=="scientific" & nrow(thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,])==1){
-        thisrec = thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,]
-        thisrec$CODE_DEFINITIVE<-TRUE
-      }
-      if (nrow(thisrec)>1){
-        thisrec = cleanTSNs(thisrec)
-      }
-      
-      
+      # if (searchtype=="scientific" & nrow(thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,])==1){
+      #   thisrec = thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,]
+      #   thisrec$CODE_DEFINITIVE<-TRUE
+      # }
+      thisrec = cleanTSNs(thisrec)
       thisrec = merge(df[,-which(colnames(df) %in% updFields)],thisrec, all.y=T, by.x=chkField, by.y = "u_rec")
     }
     results = rbind(results,thisrec)

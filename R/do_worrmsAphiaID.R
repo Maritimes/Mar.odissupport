@@ -24,19 +24,14 @@ do_worrmsAphiaID <-function(recs = NULL,
                  CODE_SRC = 'TSN',
                  CODE_DEFINITIVE = FALSE,
                  SUGG_SPELLING = NA)
-  # names(df)[names(df)=="CODE"]= "AphiaID"
-  # names(df)[names(df)=="CODE_DEFINITIVE"]= "AphiaID_DEF"
-  
-  #added loop since one record with no results botched the whole call;
-  #likely a huge performance hit
-  
   for (i in 1:total) {
     knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"]
-    cat(paste0("\t\tworrms>TSN>",recs[i],"(",knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"],"/",knownTSNs[knownTSNs$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
+    cat(paste0("\t\t\tworrms>TSN>",recs[i],"(",knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"],"/",knownTSNs[knownTSNs$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
     setWinProgressBar(pb, i, title = NULL, label = paste0(knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
-        worrms::wm_external(id = as.integer(recs[i]))
+        worrms::wm_record_by_external(id = as.integer(recs[i]))
+        
       },
       error=function(cond){
       }
@@ -50,28 +45,15 @@ do_worrmsAphiaID <-function(recs = NULL,
                           CODE_DEFINITIVE = FALSE,
                           SUGG_SPELLING = NA)
     }else{
-      
       thisrec = data.frame(joincol = trimws(toupper(recs[i])),
-                           CODE = this,   
+                           CODE = this$valid_AphiaID,   
                            CODE_SVC = 'WORRMS',
                            CODE_TYPE = 'APHIAID',
                            CODE_SRC = "TSN",
                            CODE_DEFINITIVE = FALSE,
-                           SUGG_SPELLING = NA
+                           SUGG_SPELLING = trimws(toupper(this$valid_name))
       )
-      for (j in 1:nrow(thisrec)){
-        thisDefCheck <- tryCatch({
-          data.frame(ritis::usage(thisrec[j,"CODE"]))
-        },
-        error = function(cond) {
-        })
-        if(is.null(thisDefCheck)){
-          thisrec[j,"CODE_DEFINITIVE"]<-FALSE
-        }else{
-          thisrec[j,"CODE_DEFINITIVE"]<-ifelse(thisDefCheck["taxonUsageRating"]=="valid",TRUE,FALSE)
-        }
-      }
-      
+      if (length(this$AphiaID)==1)thisrec$CODE_DEFINITIVE<-TRUE
     }
     df = rbind(df,thisrec)
   }

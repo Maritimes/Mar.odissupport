@@ -5,14 +5,18 @@
 #' 
 #' It takes a species list with Scientific and Common names and performs checks
 #' in the following order:
+#' 
 #' \enumerate{
-#'   \item Taxize (for AphiaID): Scientific name
-#'   \item Worrms (for AphiaID): Scientific name
-#'   \item Taxize (for AphiaID): Common name
-#'   \item Worrms (for AphiaID): Common name
-#'   \item Worrms (for TSN): <previously found> AphiaIDs
-#'   \item Ritis (for TSN): Scientific name
-#'   \item Ritis (for TSN): Common name
+#'   \item Check scientific names for AphiaIDs using taxize, then worrms
+#'   \item Check scientific names for missing AphiaIDs using worrms
+#'   \item Use found AphiaIDs to look for the TSNs
+#'   \item Check scientific names for missing TSNs using ritis
+#'   \item Use found TSNs to look for the AphiaIDs
+#'   \item Check common names for missing AphiaIDs using taxize, then worrms
+#'   \item Check common names for missing AphiaIDs using worrms
+#'   \item Use found AphiaIDs to look for the missing TSNs
+#'   \item Check common names for missing TSNs using ritis
+#'   \item Use found TSNs to look for the missing AphiaIDs
 #'   }
 #'   
 #' In addition to all of the original fields, the returned data
@@ -38,6 +42,8 @@
 #'   or that the matches were recognized as authoritative by the service
 #'   \item TSN_SPELLING - alternative spellings suggested for the 
 #'   TSN_SRC suggested by the service that found the TSN
+#'   \item ID_SRC - populated with the version of this script that was used to 
+#'   find a match
 #'   }
 #' @param spec_list the dataframe containing information to be decoded to TSN and
 #' aphiaIDs
@@ -129,11 +135,6 @@ getTaxaIDs <- function(spec_list = NULL,
   knownAPHIAID<-uncertainAPHIAID<-knownTSN<-uncertainTSN<-data.frame()
   rm(definitive)
   
-  #approach -- Scientific names are the most likely source of a definitive match
-  #so we look for them first (for both AphiaIDs and TSNs)
-  # Check scientific names for AphiaIDs using taxize, then worrms
-  # if TSNs have been requested, use the aphiaids to look for them
-  
   TSNs_checked = c()
   APHIAIDs_checked = c()
   
@@ -147,13 +148,8 @@ getTaxaIDs <- function(spec_list = NULL,
     TSNs_checked = APHIAID_SCI[[6]]
     mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
     mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
-    # print(mysteryAPHIAID)
-    # print(definitiveAPHIAID)
-     #print(mysteryTSN)
-     #print(definitiveTSN)
-    #print("####")
   }
-  if(doSci & "TSN" %in% codes){
+  if(doSci & "TSN" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)){
     TSN_SCI =           getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "scientific", "TSN", codes, spec_list, logName)
     definitiveAPHIAID = TSN_SCI[[2]]
     definitiveTSN = TSN_SCI[[4]]
@@ -163,13 +159,10 @@ getTaxaIDs <- function(spec_list = NULL,
     TSNs_checked = TSN_SCI[[6]]
     mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
     mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
-    # print(mysteryAPHIAID)
-    # print(definitiveAPHIAID)
-     #print(mysteryTSN)
-     #print(definitiveTSN)
-    #print("####")
+  }else{
+    cat(paste0("TSN checks via Scientific name unnecessary\n"), file = logName, append = TRUE) 
   }
-  if(doComm & "APHIAID" %in% codes) {
+  if(doComm & "APHIAID" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)) {
     APHIAID_COMM = getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "APHIAID", codes, spec_list, logName)
     definitiveAPHIAID = APHIAID_COMM[[2]]
     definitiveTSN = APHIAID_COMM[[4]]
@@ -179,13 +172,10 @@ getTaxaIDs <- function(spec_list = NULL,
     TSNs_checked = APHIAID_COMM[[6]]
     mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
     mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
-    # print(mysteryAPHIAID)
-    # print(definitiveAPHIAID)
-    #print(mysteryTSN)
-     #print(definitiveTSN)
-    #print("####")
+  }else{
+    cat(paste0("AphiaID checks via common name unnecessary\n"), file = logName, append = TRUE) 
   }
-  if(doComm & "TSN" %in% codes) {
+  if(doComm & "TSN" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)) {
     TSN_COMM =         getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "TSN", codes, spec_list, logName)
     definitiveAPHIAID = TSN_COMM[[2]]
     definitiveTSN = TSN_COMM[[4]]
@@ -195,41 +185,9 @@ getTaxaIDs <- function(spec_list = NULL,
     TSNs_checked = TSN_COMM[[6]]
     mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
     mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
-    # print(mysteryAPHIAID)
-    # print(definitiveAPHIAID)
-     #print(mysteryTSN)
-     #print(definitiveTSN)
-    #print("####")
+  }else{
+    cat(paste0("TSN checks via common name unnecessary\n"), file = logName, append = TRUE) 
   }
-  
-  #This was going to be an attempt to use suggested spellings from services to  
-  #re-initiate some of the checks.  I decided it's getting too automated and 
-  #it will likely increase false positives.  For example, "STONE" will find
-  #many valid values, like "STONEFLIES", "STONEFISH", etc, and it is difficult
-  #to automate their correct assignment.  For now, such results remain as 
-  #multi-results.
-  
-  # if (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$SUGG_SPELLING),])>0 |
-  #     nrow(mysteryTSN[!is.na(mysteryTSN$SUGG_SPELLING),])>0){
-  #   start_spell = Sys.time()
-  #   cat(paste0("Reviewing discovered alternative spellings to see if anything new can be found\n"), file = logName, append = TRUE)
-  #   spell_APHIAID <- mysteryAPHIAID[!is.na(mysteryAPHIAID$SUGG_SPELLING),]
-  #   if (nrow(spell_APHIAID)>0){
-  #     #browser()
-  #     # for (i in 1:nrow(spell_APHIAID)){
-  #     #   
-  #     # }
-  #   }
-  #   spell_TSN <- mysteryTSN[!is.na(mysteryTSN$SUGG_SPELLING),]
-  #   if (nrow(spell_TSN)>0){
-  #     cat("TSNs have some alternatives spellings to review")
-  #     #browser()
-  #     # for (i in 1:nrow(spell_TSN)){
-  #     #   
-  #     # }
-  #   }
-  #   cat(paste0("Alternative spelling review completed in",format(.POSIXct(difftime(Sys.time(), start_spell, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
-  # } 
   
   #join results back to original data
   if (doSci) spec_list$SCI_COL_CLN<-NULL
@@ -278,9 +236,6 @@ getTaxaIDs <- function(spec_list = NULL,
   spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
   
   if (exists("aphiaids_multi") & exists("tsn_multi")){
-    # aphiaids_multiKEEP<<-aphiaids_multi
-    # tsn_multiKEEP<<-tsn_multi
-    # spec_list_finalKEEP<<-spec_list_final
     multi_final = rbind(aphiaids_multi, tsn_multi)
   } else if (exists("aphiaids_multi")){
     multi_final = aphiaids_multi
@@ -294,7 +249,6 @@ getTaxaIDs <- function(spec_list = NULL,
     colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
     multi_final = merge(spec_list, multi_final[,-which(colnames(multi_final) %in% c("SCI_COL_CLN","COMM_COL_CLN"))], by="ID", all.y = T)
     multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
-    
     multi_final$ID<-NULL
   }
   

@@ -32,7 +32,7 @@ do_worrmsTSN <-function(recs = NULL,
 
   for (i in 1:total) {
     knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]
-    cat(paste0("\t\tworrms>APHIAID>",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
+    cat(paste0("\t\t\tworrms>APHIAID>",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
