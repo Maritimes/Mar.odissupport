@@ -55,10 +55,13 @@ do_ritis<-function(df = NULL,
       potents$accepted_names<-NULL
       return(potents)
     }  
-    invalid_potents <- potents[!(potents$taxonUsageRating %in% "valid"),  ]
-    if (nrow(invalid_potents)>0)cat(paste0("opportunity to further limit tsns\n"), file = logName, append = TRUE)
-    
-    #use taxonusageRating to help
+    if (nrow(potents[potents$u_rec == potents$SUGG_SPELLING,])==1){
+      potents = potents[potents$u_rec == potents$SUGG_SPELLING,]
+      potents$CODE_DEFINITIVE<-TRUE
+      potents$taxonUsageRating<-NULL
+      potents$accepted_names<-NULL
+      return(potents)
+    }
     potents$taxonUsageRating<-NULL
     potents$accepted_names<-NULL
     return(potents)

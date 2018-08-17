@@ -6,7 +6,7 @@
 \usage{
 getCodes(mysteryAPHIAID = NULL, definitiveAPHIAID = NULL,
   APHIAIDs_checked = NULL, mysteryTSN = NULL, definitiveTSN = NULL,
-  TSNs_checked = NULL, searchtype = NULL, thisCode = NULL, codes = NULL,
+  TSNs_checked = NULL, searchtype = NULL, thisCode = NULL,
   masterlist = NULL, logName = logName)
 }
 \arguments{
@@ -30,8 +30,6 @@ to the webservices (to avoid duplicate checks)}
 be used checking the services}
 
 \item{thisCode}{- the particular code that is being looked for (e.g. APHIAID)}
-
-\item{codes}{- the codes the user has requested (e.g. c("APHIAID,"TSN"))}
 
 \item{masterlist}{This is the originally submitted list of species (with an 
 internally assigned ID)}

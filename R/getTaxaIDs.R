@@ -72,8 +72,6 @@
 #' \item EGGS - removes the word "EGSS"
 #' \item PURSE\\s" - removes the word "PURSE"
 #' }
-#' @param codes These are the codes you would like to determine.  \code{TSN} and
-#' \code{APHIAID} are the only valid entries.
 #' @param debug default is \code{FALSE}  This just ensure that the log file is 
 #' overwritten rather than making many new ones.
 #' @examples
@@ -96,7 +94,6 @@ getTaxaIDs <- function(spec_list = NULL,
                        comm_col = NULL,
                        sci_Filts = NULL,
                        comm_Filts = NULL,
-                       codes = c("APHIAID", "TSN"),
                        debug = F) {
   ts = ifelse(debug, "000", format(Sys.time(), "%Y%m%d_%H%M"))
   
@@ -148,9 +145,17 @@ getTaxaIDs <- function(spec_list = NULL,
   
   TSNs_checked = c()
   APHIAIDs_checked = c()
-  
-  if(doSci & "APHIAID" %in% codes) {
-    APHIAID_SCI =   getCodes(mysteryAPHIAID, definitiveAPHIAID = NULL, APHIAIDs_checked, mysteryTSN, definitiveTSN = NULL, TSNs_checked, "scientific", "APHIAID", codes, spec_list, logName)
+  if(doSci & (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$SCI_COL_CLN),])>0 | nrow(mysteryTSN[!is.na(mysteryTSN$SCI_COL_CLN),])>0)) {
+    APHIAID_SCI =   getCodes(mysteryAPHIAID, 
+                             definitiveAPHIAID = NULL, 
+                             APHIAIDs_checked, 
+                             mysteryTSN, 
+                             definitiveTSN = NULL, 
+                             TSNs_checked, 
+                             "scientific", 
+                             "APHIAID", 
+                             spec_list, 
+                             logName)
     definitiveAPHIAID = APHIAID_SCI[[2]]
     definitiveTSN = APHIAID_SCI[[4]]
     mysteryAPHIAID = APHIAID_SCI[[1]]
@@ -160,8 +165,18 @@ getTaxaIDs <- function(spec_list = NULL,
     mysteryAPHIAID = mysteryAPHIAID[!(mysteryAPHIAID$ID %in% definitiveAPHIAID$ID),]
     mysteryTSN = mysteryTSN[!(mysteryTSN$ID %in% definitiveTSN$ID),]
   }
-  if(doSci & "TSN" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)){
-    TSN_SCI =           getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "scientific", "TSN", codes, spec_list, logName)
+  
+  if(doSci & (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$SCI_COL_CLN),])>0 | nrow(mysteryTSN[!is.na(mysteryTSN$SCI_COL_CLN),])>0)){
+    TSN_SCI =           getCodes(mysteryAPHIAID, 
+                                 definitiveAPHIAID, 
+                                 APHIAIDs_checked, 
+                                 mysteryTSN, 
+                                 definitiveTSN,
+                                 TSNs_checked, 
+                                 "scientific", 
+                                 "TSN", 
+                                 spec_list, 
+                                 logName)
     definitiveAPHIAID = TSN_SCI[[2]]
     definitiveTSN = TSN_SCI[[4]]
     mysteryAPHIAID = TSN_SCI[[1]]
@@ -173,8 +188,18 @@ getTaxaIDs <- function(spec_list = NULL,
   }else{
     cat(paste0("TSN checks via Scientific name unnecessary\n"), file = logName, append = TRUE) 
   }
-  if(doComm & "APHIAID" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)) {
-    APHIAID_COMM = getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "APHIAID", codes, spec_list, logName)
+  
+  if(doComm & (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$COMM_COL_CLN),])>0 | nrow(mysteryTSN[!is.na(mysteryTSN$COMM_COL_CLN),])>0)) {
+    APHIAID_COMM = getCodes(mysteryAPHIAID, 
+                            definitiveAPHIAID, 
+                            APHIAIDs_checked, 
+                            mysteryTSN, 
+                            definitiveTSN, 
+                            TSNs_checked, 
+                            "common", 
+                            "APHIAID", 
+                            spec_list, 
+                            logName)
     definitiveAPHIAID = APHIAID_COMM[[2]]
     definitiveTSN = APHIAID_COMM[[4]]
     mysteryAPHIAID = APHIAID_COMM[[1]]
@@ -186,8 +211,18 @@ getTaxaIDs <- function(spec_list = NULL,
   }else{
     cat(paste0("AphiaID checks via common name unnecessary\n"), file = logName, append = TRUE) 
   }
-  if(doComm & "TSN" %in% codes & (nrow(mysteryAPHIAID)>0 | nrow(mysteryTSN)>0)) {
-    TSN_COMM =         getCodes(mysteryAPHIAID, definitiveAPHIAID, APHIAIDs_checked, mysteryTSN, definitiveTSN, TSNs_checked, "common", "TSN", codes, spec_list, logName)
+  
+  if(doComm & (nrow(mysteryAPHIAID[!is.na(mysteryAPHIAID$COMM_COL_CLN),])>0 | nrow(mysteryTSN[!is.na(mysteryTSN$COMM_COL_CLN),])>0)) {
+    TSN_COMM =         getCodes(mysteryAPHIAID, 
+                                definitiveAPHIAID, 
+                                APHIAIDs_checked, 
+                                mysteryTSN, 
+                                definitiveTSN, 
+                                TSNs_checked, 
+                                "common", 
+                                "TSN", 
+                                spec_list, 
+                                logName)
     definitiveAPHIAID = TSN_COMM[[2]]
     definitiveTSN = TSN_COMM[[4]]
     mysteryAPHIAID = TSN_COMM[[1]]
@@ -207,9 +242,8 @@ getTaxaIDs <- function(spec_list = NULL,
   spec_list_final = spec_list
   spec_list_final$APHIAID_MULTI_FLAG <-FALSE
   spec_list_final$TSN_MULTI_FLAG <-FALSE
-  
-  if ("APHIAID" %in% codes) {
     
+  
     aphiaids = rbind(definitiveAPHIAID, mysteryAPHIAID)  
     if (nrow(aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),])>0){
       aphiaids_multi = aphiaids[(duplicated(aphiaids$ID, fromLast = FALSE)|duplicated(aphiaids$ID, fromLast = TRUE)),]
@@ -224,9 +258,7 @@ getTaxaIDs <- function(spec_list = NULL,
     if (exists("aphiaids_multi")) {
       spec_list_final[(spec_list_final$ID %in% aphiaids_multi$ID), "APHIAID_MULTI_FLAG"] <-TRUE
     }
-  }
   
-  if ("TSN" %in% codes) {
     tsns = rbind(definitiveTSN, mysteryTSN)
     if (nrow(tsns[(duplicated(tsns$ID, fromLast = FALSE)|duplicated(tsns$ID, fromLast = TRUE)),])>0){
       tsn_multi = tsns[(duplicated(tsns$ID, fromLast = FALSE)|duplicated(tsns$ID, fromLast = TRUE)),]
@@ -240,7 +272,6 @@ getTaxaIDs <- function(spec_list = NULL,
     if (exists("tsn_multi")) {
       spec_list_final[(spec_list_final$ID %in% tsn_multi$ID), "TSN_MULTI_FLAG"] <-TRUE
     }
-  }
   
   
   spec_list_final$ID<-NULL

@@ -5,8 +5,7 @@
 \title{getTaxaIDs}
 \usage{
 getTaxaIDs(spec_list = NULL, sci_col = NULL, comm_col = NULL,
-  sci_Filts = NULL, comm_Filts = NULL, codes = c("APHIAID", "TSN"),
-  debug = F)
+  sci_Filts = NULL, comm_Filts = NULL, debug = F)
 }
 \arguments{
 \item{spec_list}{the dataframe containing information to be decoded to TSN and
@@ -40,9 +39,6 @@ and \code{comm_col}:
 \item EGGS - removes the word "EGSS"
 \item PURSE\\s" - removes the word "PURSE"
 }}
-
-\item{codes}{These are the codes you would like to determine.  \code{TSN} and
-\code{APHIAID} are the only valid entries.}
 
 \item{debug}{default is \code{FALSE}  This just ensure that the log file is 
 overwritten rather than making many new ones.}

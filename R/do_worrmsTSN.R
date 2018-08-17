@@ -27,12 +27,10 @@ do_worrmsTSN <-function(recs = NULL,
   # names(df)[names(df)=="CODE"]= "AphiaID"
   # names(df)[names(df)=="CODE_DEFINITIVE"]= "AphiaID_DEF"
   
-  #added loop since one record with no results botched the whole call;
-  #likely a huge performance hit
-
   for (i in 1:total) {
     knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]
-    cat(paste0("\t\t\tworrms>APHIAID>",recs[i],"(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")\n"), file = logName, append = TRUE)
+    #(",knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"],"/",knownAphias[knownAphias$CODE==recs[i],"COMM_COL_CLN"],")
+    cat(paste0("\t\t\tworrms>APHIAID>",recs[i],"\n"), file = logName, append = TRUE)
       setWinProgressBar(pb, i, title = NULL, label = paste0(knownAphias[knownAphias$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
     this <- tryCatch(
       {
