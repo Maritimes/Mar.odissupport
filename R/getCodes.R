@@ -62,17 +62,23 @@ getCodes <- function(mysteryAPHIAID = NULL,
   
   if (thisCode=="APHIAID"){
     #TAXIZE
-    if (nrow(dfMystery)>0){
-      tmp_sci_taxize = do_taxize(dfMystery,chkField,logName,searchtype)
-      defCheck = assignDefinitive(df = tmp_sci_taxize, masterList)
-      newdefinitive= defCheck[[1]]
-      dfMystery= defCheck[[2]]
-      rm(tmp_sci_taxize)
+    if (nrow(dfMystery[!is.na(dfMystery[chkField]),])>0){
+      forCheckA = dfMystery[!is.na(dfMystery[chkField]),]
+      notCheckA = dfMystery[is.na(dfMystery[chkField]),]
+      
+      if (nrow(forCheckA)>0){
+        tmp_sci_taxize = do_taxize(forCheckA,chkField,logName,searchtype)
+        defCheck = assignDefinitive(df = tmp_sci_taxize, masterList)
+        newdefinitive= defCheck[[1]]
+        mysteryAPHIAID= defCheck[[2]]
+        rm(tmp_sci_taxize)
       if (nrow(dfDefinitive)<1){
         dfDefinitive<-newdefinitive
       }else{
         dfDefinitive <- unique(rbind(dfDefinitive[dfDefinitive$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
       }
+      }
+      dfMystery = rbind(mysteryAPHIAID,notCheckA)
     }
     #WORRMS - science
     if (nrow(dfMystery)>0){
@@ -89,17 +95,22 @@ getCodes <- function(mysteryAPHIAID = NULL,
     }
   }else if (thisCode=="TSN"){
     #ritis
-    if (nrow(dfMystery)>0){
-      tmp_sci_ritis = do_ritis(dfMystery,chkField,logName,searchtype)
-      defCheck = assignDefinitive(df = tmp_sci_ritis, masterList)
-      newdefinitive= defCheck[[1]]
-      mysteryTSN= defCheck[[2]]
-      rm(tmp_sci_ritis)
-      if (nrow(dfDefinitive)<1){
-        dfDefinitive<-newdefinitive
-      }else{
-        dfDefinitive <- unique(rbind(dfDefinitive[dfDefinitive$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+    if (nrow(dfMystery[!is.na(dfMystery[chkField]),])>0){
+      forCheckT = dfMystery[!is.na(dfMystery[chkField]),]
+      notCheckT = dfMystery[is.na(dfMystery[chkField]),]
+      if (nrow(forCheckT)>0){
+        tmp_sci_ritis = do_ritis(forCheckT,chkField,logName,searchtype)
+        defCheck = assignDefinitive(df = tmp_sci_ritis, masterList)
+        newdefinitive= defCheck[[1]]
+        mysteryTSN= defCheck[[2]]
+        rm(tmp_sci_ritis)
+        if (nrow(dfDefinitive)<1){
+          dfDefinitive<-newdefinitive
+        }else{
+          dfDefinitive <- unique(rbind(dfDefinitive[dfDefinitive$CODE_DEFINITIVE %in% TRUE,],newdefinitive))
+        }
       }
+      dfMystery = rbind(mysteryTSN, notCheckT)
     }
   }
   #if a mystery code matches the spelling of the sent value, we'll use  that one and drop the others
@@ -112,7 +123,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
   
   if("APHIAID" %in% codes & thisCode !="APHIAID"){
     if("TSN" %in% codes){
-      recs_W_codeT = dfDefinitive[!is.null(dfDefinitive$CODE) & !(dfDefinitive$ID %in% dfDefinitiveOther$ID),]
+      recs_W_codeT = dfDefinitive[!is.na(dfDefinitive$CODE) & !(dfDefinitive$ID %in% dfDefinitiveOther$ID),]
       #make sure we don't send the same codes off repeatedly
       recs_W_codeT = recs_W_codeT[!(recs_W_codeT$CODE %in% TSNs_checked),]
       if (nrow(recs_W_codeT)>0){
@@ -150,7 +161,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
   
   if("TSN" %in% codes & thisCode !="TSN"){
     if("APHIAID" %in% codes){
-      recs_W_codeA = dfDefinitive[!is.null(dfDefinitive$CODE) & !(dfDefinitive$ID %in% dfDefinitiveOther$ID),]
+      recs_W_codeA = dfDefinitive[!is.na(dfDefinitive$CODE) & !(dfDefinitive$ID %in% dfDefinitiveOther$ID),]
       #make sure we don't send the same codes off repeatedly
       recs_W_codeA = recs_W_codeA[!(recs_W_codeA$CODE %in% APHIAIDs_checked),]
       if (nrow(recs_W_codeA)>0){

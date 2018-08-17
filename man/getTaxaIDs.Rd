@@ -95,6 +95,18 @@ will include:
   find a match
   }
 }
+\examples{
+testData <- data.frame(
+  internals_codes = 1:7,
+  sci_names = c("OSMERUS MORDAX", "SELACHII (CHONDRICHTHYES) (CLASS)",
+  "LIPARIS  SP.","OSTRACIONTIDAE (OSTRACIIDAE)",
+  "PHYLLODOCE SP.","SPIO SP.","DENTALIUM ENTALE"),
+  comm_names = c("SMELT", "CARTILAGINOUS FISHES",
+  "SEASNAILS (NS) LIP.SP.","TRUNKFISHES (NS)",
+  "POLYCHAETE","POLYCHAETE","TUSK SHELL")
+)
+getTaxaIDs(spec_list = testData, sci_col = "sci_names", comm_col = "comm_names")
+}
 \seealso{
 Other speciesCodes: \code{\link{assignDefinitive}},
   \code{\link{cleanPrepareSpecList}},

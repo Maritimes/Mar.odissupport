@@ -23,21 +23,17 @@ do_taxize<-function(df = NULL,
   }else  if (searchtype=="common"){
     cat(paste0("\ttaxize > common names\n"), file = logName, append = TRUE)
   }
-  
   u_df = data.frame(u_rec =unique(df[!is.na(df[chkField]),chkField]),
                     match=NA,
                     multiple_matches = NA,
                     pattern_match = NA,
                     CODE = NA)
-
-  
   results=df[0,]
   updFields = c("CODE","CODE_SRC","CODE_SVC","CODE_TYPE","CODE_DEFINITIVE","SUGG_SPELLING")
   pb <- winProgressBar(title = paste0("APHIAID>TAXIZE>",chkField), label=u_df[1,"u_rec"], min = 0, max = nrow(u_df), width = 300)
   for (i in 1:nrow(u_df)) {
     cat(paste0("\t\ttaxize>",searchtype,">",u_df[i,"u_rec"]), file = logName, append = TRUE)
     setWinProgressBar(pb, i, title = NULL, label = paste0(u_df[i,"u_rec"]," (", nrow(u_df)-i," left)"))
-    
     this <- tryCatch({
       taxize::get_wormsid(
         query = u_df[i,"u_rec"],
@@ -53,7 +49,7 @@ do_taxize<-function(df = NULL,
     })
     if (is.null(this)){
       cat(paste0(" - NA\n"), file = logName, append = TRUE)
-      thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
+       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else{
       cat(paste0(" - Results\n"), file = logName, append = TRUE)
       tmp=data.frame(this)
@@ -67,7 +63,7 @@ do_taxize<-function(df = NULL,
         },
         error = function(cond) {
         })
-        if (!is.null(thisDefCheck)& length(thisDefCheck)>0){
+        if (!is.null(thisDefCheck)& length(thisDefCheck)>0 & !is.null(thisDefCheck$valid_AphiaID) & !is.null(thisDefCheck$valid_name)){
           tmp[j,"validID"]<-thisDefCheck$valid_AphiaID
           tmp[j,"validSciName"]<-thisDefCheck$valid_name
         }

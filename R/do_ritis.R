@@ -68,6 +68,7 @@ do_ritis<-function(df = NULL,
   }else  if (searchtype=="common"){
     cat(paste0("\tritis > common names\n"), file = logName, append = TRUE)
   }
+  
   u_df = data.frame(u_rec =unique(df[!is.na(df[chkField]),chkField]),
                     ritisname=NA,
                     CODE = NA)
@@ -93,6 +94,7 @@ do_ritis<-function(df = NULL,
       },
       error = function(cond) {
       })
+      
     }
     if (is.null(this)){
       cat(paste0("- NA\n"), file = logName, append = TRUE)

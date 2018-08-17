@@ -76,6 +76,17 @@
 #' \code{APHIAID} are the only valid entries.
 #' @param debug default is \code{FALSE}  This just ensure that the log file is 
 #' overwritten rather than making many new ones.
+#' @examples
+#' testData <- data.frame(
+#'   internals_codes = 1:7,
+#'   sci_names = c("OSMERUS MORDAX", "SELACHII (CHONDRICHTHYES) (CLASS)",
+#'   "LIPARIS  SP.","OSTRACIONTIDAE (OSTRACIIDAE)",
+#'   "PHYLLODOCE SP.","SPIO SP.","DENTALIUM ENTALE"),
+#'   comm_names = c("SMELT", "CARTILAGINOUS FISHES",
+#'   "SEASNAILS (NS) LIP.SP.","TRUNKFISHES (NS)",
+#'   "POLYCHAETE","POLYCHAETE","TUSK SHELL")
+#' )
+#' getTaxaIDs(spec_list = testData, sci_col = "sci_names", comm_col = "comm_names")
 #' @family speciesCodes
 #' @importFrom stats setNames
 #' @author  Mike McMahon, \email{Mike.McMahon@@dfo-mpo.gc.ca}
@@ -233,7 +244,7 @@ getTaxaIDs <- function(spec_list = NULL,
   
   
   spec_list_final$ID<-NULL
-  spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+#  spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
   
   if (exists("aphiaids_multi") & exists("tsn_multi")){
     multi_final = rbind(aphiaids_multi, tsn_multi)
@@ -248,7 +259,7 @@ getTaxaIDs <- function(spec_list = NULL,
     cat(paste0("Multiple codes were found for some species\n"), file = logName, append = TRUE)
     colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
     multi_final = merge(spec_list, multi_final[,-which(colnames(multi_final) %in% c("SCI_COL_CLN","COMM_COL_CLN"))], by="ID", all.y = T)
-    multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+#    multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
     multi_final$ID<-NULL
   }
   
