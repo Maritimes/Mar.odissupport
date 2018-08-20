@@ -295,7 +295,7 @@ getTaxaIDs <- function(spec_list = NULL,
   }
   
   res = list(spec_list_final, multi_final)
-  cat(paste0("Completed in ",format(.POSIXct(difftime(Sys.time(), start, units="secs"),tz="GMT")),"\n"), file = logName, append = TRUE)
+  cat(paste0("Completed in ",format(.POSIXct(difftime(Sys.time(), start, units="secs"),tz="GMT"), "%H:%M:%S"),"\n"), file = logName, append = TRUE)
   cat("####################################################\n", file = logName, append = TRUE)
   cat("Done")
   return(res)
