@@ -43,9 +43,25 @@ do_ritis<-function(df = NULL,
       error = function(cond) {
       })
       if (!is.null(thisDefCheck2)& nrow(thisDefCheck2)>0){
-        potents[k,"SUGG_SPELLING"]<-trimws(toupper(thisDefCheck2$acceptedName))
-        potents[k,"CODE"]<-thisDefCheck2$acceptedTsn
-        if (nrow(thisDefCheck2)>1)browser()
+        thisDefCheck2$acceptedName<-trimws(toupper(thisDefCheck2$acceptedName))
+        potents$CODE<-NA
+        potents$SUGG_SPELLING<-NA
+        potents$taxonUsageRating<-NULL
+        potents$accepted_names<-NULL
+        newPotents=potents[0,]
+        for (l in 1:nrow(thisDefCheck2)){
+          newPotents[l,c("u_rec")]<-potents[k,"u_rec"]
+          newPotents[l,c("CODE_TYPE")]<-"TSN"
+          newPotents[l,c("CODE_SVC")]<-"RITIS"
+          newPotents[l,c("CODE_SRC")]<-potents[k,"CODE_SRC"]
+          newPotents[l,c("SUGG_SPELLING", "CODE")]<-thisDefCheck2[l,c("acceptedName","acceptedTsn")]
+          if (nrow(newPotents)==1) {
+            newPotents$CODE_DEFINITIVE<-TRUE
+          }else{
+            newPotents$CODE_DEFINITIVE<-FALSE
+          }
+          potents<-newPotents
+        }
       }
     }
     
@@ -107,6 +123,7 @@ do_ritis<-function(df = NULL,
       thisrec = df[df[,chkField]==u_df[i,"u_rec"],]
     }else{
       cat(paste0("- Found\n"), file = logName, append = TRUE)
+      
       tmp=unique(data.frame(this))
       #format results so they look the same regardless of searchtype
       if (searchtype=="scientific"){
@@ -130,10 +147,6 @@ do_ritis<-function(df = NULL,
       if (nrow(thisrec[sapply(strsplit(thisrec$SUGG_SPELLING, " "), length) ==sapply(strsplit(u_df[i,"u_rec"], " "), length), ])>0){
         thisrec = thisrec[sapply(strsplit(thisrec$SUGG_SPELLING, " "), length) ==sapply(strsplit(u_df[i,"u_rec"], " "), length), ]  
       }  
-      # if (searchtype=="scientific" & nrow(thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,])==1){
-      #   thisrec = thisrec[thisrec$SUGG_SPELLING==thisrec$u_rec,]
-      #   thisrec$CODE_DEFINITIVE<-TRUE
-      # }
       thisrec = cleanTSNs(thisrec)
       thisrec = merge(df[,-which(colnames(df) %in% updFields)],thisrec, all.y=T, by.x=chkField, by.y = "u_rec")
     }

@@ -131,7 +131,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
       allRecs_W_codeT = allRecs_W_codeT[!(allRecs_W_codeT$CODE %in% TSNs_checked),]
       if (nrow(allRecs_W_codeT)>0){
         start_APHIAIDTSN = Sys.time()
-        cat(paste0("\t\tUsing found ",thisCode,"s to search for AphiaID\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tUsing discovered ",thisCode,"s to search for AphiaID\n"), file = logName, append = TRUE)
         #only send unique codes
         uRecs_W_codeT = unique(data.frame(CODE = allRecs_W_codeT[,c("CODE")]))
         browser()
@@ -172,7 +172,7 @@ getCodes <- function(mysteryAPHIAID = NULL,
       allRecs_W_codeA = allRecs_W_codeA[!(allRecs_W_codeA$CODE %in% APHIAIDs_checked),]
       if (nrow(allRecs_W_codeA)>0){
         start_TSNAPHIAID = Sys.time()
-        cat(paste0("\t\tUsing found ",thisCode,"s to search for TSNs\n"), file = logName, append = TRUE)
+        cat(paste0("\t\tUsing discovered ",thisCode,"s to search for TSNs\n"), file = logName, append = TRUE)
         #only send unique codes
         uRecs_W_codeA = unique(data.frame(CODE = allRecs_W_codeA[,c("CODE")]))
         code_TSNRes = do_worrmsTSN(uRecs_W_codeA$CODE,uRecs_W_codeA, logName=logName)
