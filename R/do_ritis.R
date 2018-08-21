@@ -21,7 +21,6 @@ do_ritis<-function(df = NULL,
   
   cleanTSNs <- function(potents){
     potents$taxonUsageRating<-NA
-    potents$accepted_names<-NA
     #if we have a bunch of tsns for a query but don't know which to keep
     for (j in 1:nrow(potents)){
       thisDefCheck <- tryCatch({
@@ -34,8 +33,10 @@ do_ritis<-function(df = NULL,
         if (nrow(thisDefCheck)>1)browser()
       }
     }  
-    
+    #if it's an option, keep those that are valid only
     if (nrow(potents[potents$taxonUsageRating =="valid",])>0)potents = potents[potents$taxonUsageRating =="valid",]
+    
+    #check for accepted names and tsns for all potentials 
     for (k in 1:nrow(potents)){
       thisDefCheck2 <- tryCatch({
         data.frame(ritis::accepted_names(potents[k,"CODE"]))
@@ -44,42 +45,30 @@ do_ritis<-function(df = NULL,
       })
       if (!is.null(thisDefCheck2)& nrow(thisDefCheck2)>0){
         thisDefCheck2$acceptedName<-trimws(toupper(thisDefCheck2$acceptedName))
-        potents$CODE<-NA
-        potents$SUGG_SPELLING<-NA
-        potents$taxonUsageRating<-NULL
-        potents$accepted_names<-NULL
-        newPotents=potents[0,]
-        for (l in 1:nrow(thisDefCheck2)){
-          newPotents[l,c("u_rec")]<-potents[k,"u_rec"]
-          newPotents[l,c("CODE_TYPE")]<-"TSN"
-          newPotents[l,c("CODE_SVC")]<-"RITIS"
-          newPotents[l,c("CODE_SRC")]<-potents[k,"CODE_SRC"]
-          newPotents[l,c("SUGG_SPELLING", "CODE")]<-thisDefCheck2[l,c("acceptedName","acceptedTsn")]
-          if (nrow(newPotents)==1) {
-            newPotents$CODE_DEFINITIVE<-TRUE
-          }else{
-            newPotents$CODE_DEFINITIVE<-FALSE
-          }
-          potents<-newPotents
-        }
-      }
+        thisDefCheck2$CODE_orig<-potents[k,"CODE"]
+        if (nrow(thisDefCheck2)>1)browser()
+        tmp = merge(potents[k,],thisDefCheck2, by.x = "CODE", by.y = "CODE_orig", all.y=T)
+        tmp$CODE<-tmp$acceptedTsn
+        tmp$SUGG_SPELLING<-tmp$acceptedName
+        tmp$acceptedName<-tmp$acceptedTsn<-tmp$author<-NULL
+        potents = potents[-k,]
+        potents = rbind(potents,tmp)
+      }else if (nrow(thisDefCheck2)==1){
+        potents = potents[-k,]
+      }else{}
     }
-    
     if (nrow(potents)==1){
       potents$CODE_DEFINITIVE<-TRUE
       potents$taxonUsageRating<-NULL
-      potents$accepted_names<-NULL
       return(potents)
     }  
     if (nrow(potents[potents$u_rec == potents$SUGG_SPELLING,])==1){
       potents = potents[potents$u_rec == potents$SUGG_SPELLING,]
       potents$CODE_DEFINITIVE<-TRUE
       potents$taxonUsageRating<-NULL
-      potents$accepted_names<-NULL
       return(potents)
     }
     potents$taxonUsageRating<-NULL
-    potents$accepted_names<-NULL
     return(potents)
   }
   if (searchtype=="scientific"){

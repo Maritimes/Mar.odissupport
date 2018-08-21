@@ -134,11 +134,9 @@ getCodes <- function(mysteryAPHIAID = NULL,
         cat(paste0("\t\tUsing discovered ",thisCode,"s to search for AphiaID\n"), file = logName, append = TRUE)
         #only send unique codes
         uRecs_W_codeT = unique(data.frame(CODE = allRecs_W_codeT[,c("CODE")]))
-        browser()
         code_APHIAIDRes =   do_worrmsAphiaID(uRecs_W_codeT$CODE,uRecs_W_codeT, logName=logName)
         #some field renaming below to prevent a warning
         names(code_APHIAIDRes)[names(code_APHIAIDRes) == 'CODE'] <- 'APHIAID'
-        
         code_APHIAIDRes = merge(allRecs_W_codeT[,c("SCI_COL_CLN","COMM_COL_CLN","ID", "CODE")],code_APHIAIDRes, by.x = "CODE", by.y="TSN")
         # aphiaIDFields = c("ID", "CODE")
         # code_APHIAIDRes = merge(recs_W_codeT[,aphiaIDFields],code_APHIAIDRes, by.x = "CODE", by.y="TSN")
