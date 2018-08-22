@@ -46,7 +46,6 @@ do_ritis<-function(df = NULL,
       if (!is.null(thisDefCheck2)& nrow(thisDefCheck2)>0){
         thisDefCheck2$acceptedName<-trimws(toupper(thisDefCheck2$acceptedName))
         thisDefCheck2$CODE_orig<-potents[k,"CODE"]
-        if (nrow(thisDefCheck2)>1)browser()
         tmp = merge(potents[k,],thisDefCheck2, by.x = "CODE", by.y = "CODE_orig", all.y=T)
         tmp$CODE<-tmp$acceptedTsn
         tmp$SUGG_SPELLING<-tmp$acceptedName
