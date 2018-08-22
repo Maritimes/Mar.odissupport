@@ -25,7 +25,7 @@ do_worrmsAphiaID <-function(recs = NULL,
                  CODE_DEFINITIVE = FALSE,
                  SUGG_SPELLING = NA)
   for (i in 1:total) {
-    knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"]
+    #knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"]
     #"(",knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"],"/",knownTSNs[knownTSNs$CODE==recs[i],"COMM_COL_CLN"],")
     cat(paste0("\t\t\tworrms>TSN>",recs[i],"\n"), file = logName, append = TRUE)
     setWinProgressBar(pb, i, title = NULL, label = paste0(knownTSNs[knownTSNs$CODE==recs[i],"SCI_COL_CLN"]," (", total-i," left)"))
@@ -45,7 +45,15 @@ do_worrmsAphiaID <-function(recs = NULL,
                           CODE_SRC = 'TSN',
                           CODE_DEFINITIVE = FALSE,
                           SUGG_SPELLING = NA)
-    }else{
+    } else if (is.null(this$valid_AphiaID)){
+      thisrec = data.frame(joincol = trimws(toupper(recs[i])),
+                           CODE = this$AphiaID,   
+                           CODE_SVC = 'WORRMS',
+                           CODE_TYPE = 'APHIAID',
+                           CODE_SRC = "TSN",
+                           CODE_DEFINITIVE = FALSE,
+                           SUGG_SPELLING = NA)
+    }else{  
       thisrec = data.frame(joincol = trimws(toupper(recs[i])),
                            CODE = this$valid_AphiaID,   
                            CODE_SVC = 'WORRMS',
