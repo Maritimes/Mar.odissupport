@@ -30,7 +30,7 @@ do_ritis<-function(df = NULL,
       })
       if (!is.null(thisDefCheck)& nrow(thisDefCheck)>0){
         potents[j,"taxonUsageRating"]<-thisDefCheck$taxonUsageRating
-        if (nrow(thisDefCheck)>1)browser()
+        if (nrow(thisDefCheck)>1)print(paste0("warning - nrow(thisDefCheck)>1 for", potents[j,"CODE"],"\n"))
       }
     }  
     #if it's an option, keep those that are valid only
