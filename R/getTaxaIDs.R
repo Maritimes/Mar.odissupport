@@ -275,7 +275,11 @@ getTaxaIDs <- function(spec_list = NULL,
   
   
   spec_list_final$ID<-NULL
-#  spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+  if (!debug) {
+    spec_list_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+  }else{
+    spec_list_final$ID_SRC <- "Mar.odissupport::getTaxaIDs.R (DEBUG)"
+  }
   
   if (exists("aphiaids_multi") & exists("tsn_multi")){
     multi_final = rbind(aphiaids_multi, tsn_multi)
@@ -290,7 +294,11 @@ getTaxaIDs <- function(spec_list = NULL,
     cat(paste0("Multiple codes were found for some species\n"), file = logName, append = TRUE)
     colnames(multi_final)[colnames(multi_final) == 'CODE'] <- 'CODE_SUGG'
     multi_final = merge(spec_list, multi_final[,-which(colnames(multi_final) %in% c("SCI_COL_CLN","COMM_COL_CLN"))], by="ID", all.y = T)
-#    multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+    if (!debug) {
+      multi_final$ID_SRC <- paste0("Mar.odissupport::getTaxaIDs.R (v",utils::packageDescription('Mar.odissupport')$Version,")") 
+    }else{
+      multi_final$ID_SRC <- "Mar.odissupport::getTaxaIDs.R (DEBUG)"
+    }
     multi_final$ID<-NULL
   }
   
