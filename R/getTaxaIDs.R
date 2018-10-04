@@ -95,12 +95,12 @@ getTaxaIDs <- function(spec_list = NULL,
                        sci_Filts = NULL,
                        comm_Filts = NULL,
                        debug = F) {
-  ts = ifelse(debug, "000", format(Sys.time(), "%Y%m%d_%H%M"))
+  ts = ifelse(debug, "000", format(Sys.time(), "%Y%m%d_%H%M%S"))
   
   logName = paste0("getTaxaIDs_",ts,".log")
   log_con <- file(logName)
   start = Sys.time()
-  cat(paste0("Initiated at ",format(start, "%Y-%m-%d %H:%M"),"\n"), file = log_con) 
+  cat(paste0("Initiated at ",format(start, "%Y-%m-%d %H:%M:%S"),"\n"), file = log_con) 
   cat(paste0("A log file has been generated at ",file.path(getwd(),logName),"\nIn the event of failure, this file will reveal the last successful operation\n"))
   fields = c("ID")
   
