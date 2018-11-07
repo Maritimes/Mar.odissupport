@@ -69,7 +69,12 @@ cleanPrepareSpecList<-function(spec_list = NULL,
                      "\\bSHARK\\b","\\bCOD WORM\\b","\\bCORALS\\b","\\bSKATE\\b",
                      "\\bFINFISHES\\b","\\bGROUNDFISH\\b","\\bPELAGIC FISH\\b",
                      "\\bSAND TUBE\\b")
-  
+  if (!is.null(sci_col) & !is.null(comm_col)){
+    spec_list$TMP<-NA
+    spec_list[mapply(grepl,  spec_list[, "SPEC"], spec_list[, "COMM"]),"TMP"]<-spec_list[mapply(grepl,  spec_list[, "SPEC"], spec_list[, "COMM"]),"SPEC"]
+    spec_list[mapply(grepl,  spec_list[, "SPEC"], spec_list[, "COMM"]),"COMM"]<-mapply(gsub, spec_list[!is.na(spec_list$TMP),"TMP"],"",spec_list[!is.na(spec_list$TMP),"COMM"])
+    spec_list$TMP<-NULL
+  }
   if (!is.null(sci_col)) {
     #SCI_COL_CLN populated with sci names
     spec_list$SCI_COL_CLN = toupper(spec_list[, sci_col])
@@ -119,9 +124,11 @@ cleanPrepareSpecList<-function(spec_list = NULL,
       spec_list[!is.na(spec_list$new),"COMM_COL_CLN"]<-spec_list[!is.na(spec_list$new),"new"]
       spec_list$new<-NULL
     }
+    
     #final remove whitespace and drop really short records
     spec_list[which(nchar(spec_list$COMM_COL_CLN)<4),"COMM_COL_CLN"]<-NA
   } 
+   
   #remove Rows that get added if you try to run on non-existent recs
   spec_list =spec_list[!grepl("^NA", rownames(spec_list)),]
   return(spec_list)
